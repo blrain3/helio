@@ -1,18 +1,50 @@
 import { createBrowserRouter } from 'react-router';
+import { AppShell } from './components/AppShell';
 
-// 路由骨架：P0 页面（Dashboard/Analytics/账单/支付/登录）将在 M0–M4 实现
-// P1（电站/设备/用户管理）在 M5–M6 补充，P2（设置/帮助）延后
+/**
+ * 路由配置：业务页面挂载在 AppShell（含侧边导航）下，
+ * 登录页独立于外壳。
+ */
 export const router = createBrowserRouter([
-  {
-    path: '/',
-    lazy: () => import('./pages/home/page'),
-  },
-  {
-    path: '/dashboard',
-    lazy: () => import('./pages/dashboard/page'),
-  },
   {
     path: '/auth/login',
     lazy: () => import('./pages/auth/login'),
+  },
+  {
+    element: <AppShell />,
+    children: [
+      {
+        path: '/',
+        lazy: () => import('./pages/home/page'),
+      },
+      {
+        path: '/dashboard',
+        lazy: () => import('./pages/dashboard/page'),
+      },
+      {
+        path: '/plants',
+        lazy: () => import('./pages/plants/page'),
+      },
+      {
+        path: '/devices',
+        lazy: () => import('./pages/devices/page'),
+      },
+      {
+        path: '/bills',
+        lazy: () => import('./pages/bills/page'),
+      },
+      {
+        path: '/orders',
+        lazy: () => import('./pages/orders/page'),
+      },
+      {
+        path: '/payments',
+        lazy: () => import('./pages/payments/page'),
+      },
+      {
+        path: '/anomalies',
+        lazy: () => import('./pages/anomalies/page'),
+      },
+    ],
   },
 ]);
