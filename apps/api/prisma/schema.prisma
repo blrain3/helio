@@ -179,6 +179,24 @@ model AnomalyRule {
   createdAt DateTime @default(now())
 }
 
+// 异常检测结果（可解释、可追溯）
+model AnomalyEvent {
+  id            String   @id @default(uuid())
+  plantId       String
+  deviceId      String?
+  ruleId        String
+  ruleVersion   Int
+  severity      String   // NORMAL / WARNING / CRITICAL
+  anomalyScore  Float
+  baselineValue Float?   // 历史基线值
+  actualValue   Float    // 实际观测值
+  detectedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([plantId, detectedAt])
+  @@index([ruleId, detectedAt])
+}
+
 enum Role {
   USER
   OPERATOR
