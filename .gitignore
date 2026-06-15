@@ -38,6 +38,9 @@ __pycache__/
 # Turborepo
 .turbo/
 
+# Local Git worktrees
+.worktrees/
+
 # Prisma 生成的客户端（运行时由 prisma generate 重建）
 apps/api/node_modules/.prisma/
 
