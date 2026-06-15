@@ -12,16 +12,21 @@ describe('PaymentController Mock callback endpoint', () => {
     ).toBeUndefined();
   });
 
-  it('forwards only the route payment ID to the server-side orchestrator', async () => {
+  it('forwards the route payment ID and authenticated principal to the server-side orchestrator', async () => {
     const complete = vi.fn().mockResolvedValue({ ack: 'ok' });
+    const user = {
+      sub: 'user-1',
+      email: 'owner@helio.dev',
+      role: 'USER' as const,
+    };
     const controller = new PaymentController(
       {} as never,
       {} as never,
       { complete } as never,
     );
 
-    await expect(controller.completeMockPayment('payment-1')).resolves.toEqual({ ack: 'ok' });
+    await expect(controller.completeMockPayment('payment-1', user)).resolves.toEqual({ ack: 'ok' });
 
-    expect(complete).toHaveBeenCalledWith('payment-1');
+    expect(complete).toHaveBeenCalledWith('payment-1', user);
   });
 });

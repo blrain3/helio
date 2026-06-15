@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ForbiddenError, ValidationError } from '../../auth/domain/errors';
+import { AuthUser } from '../../auth/domain/user.entity';
+import { OrderService } from '../../order/application/order.service';
 import { MockGateway } from '../infrastructure/mock.gateway';
 import { PaymentService } from './payment.service';
 
@@ -13,14 +15,16 @@ export class MockPaymentService {
   constructor(
     private readonly payments: PaymentService,
     private readonly gateway: MockGateway,
+    private readonly orders: OrderService,
   ) {}
 
-  async complete(paymentId: string): Promise<{ ack: string }> {
+  async complete(paymentId: string, user: AuthUser): Promise<{ ack: string }> {
     if (!this.isEnabled()) {
       throw new ForbiddenError('Mock 支付演示仅在开发环境且 Mock 渠道启用时可用');
     }
 
     const payment = await this.payments.findById(paymentId);
+    await this.orders.assertOwnedByUser(payment.orderId, user.sub);
     if (payment.provider !== 'mock') {
       throw new ValidationError('仅 Mock 支付流水可触发演示回调');
     }
@@ -36,7 +40,8 @@ export class MockPaymentService {
   private isEnabled(): boolean {
     return (
       process.env.NODE_ENV !== 'production' &&
-      (process.env.PAYMENT_PROVIDER ?? 'mock') === 'mock'
+      process.env.PAYMENT_PROVIDER === 'mock' &&
+      process.env.MOCK_PAYMENT_DEMO_ENABLED === 'true'
     );
   }
 }
