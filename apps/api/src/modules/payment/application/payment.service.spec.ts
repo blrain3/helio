@@ -356,4 +356,48 @@ describe('PaymentService.createPayment（下单）', () => {
       expect.objectContaining({ orderId: 'o-1', merchantOrderId: 'ORD1', status: 'PENDING' }),
     );
   });
+
+  it('成功创建支付后入队延迟关单任务（默认 30 分钟）', async () => {
+    deps.orders.findById.mockResolvedValue(order);
+    deps.payments.findByMerchantOrderId.mockResolvedValue(null);
+    deps.payments.create.mockResolvedValue({
+      id: 'p-1', orderId: 'o-1', provider: 'mock', providerTransactionId: 'MOCK1',
+      merchantOrderId: 'ORD1', amount: 101234, refundedAmount: 0, status: 'PENDING',
+      createdAt: new Date(), updatedAt: new Date(),
+    });
+
+    await service.createPayment('o-1', 'mock', 'https://x/cb');
+
+    expect(deps.events.publish).toHaveBeenCalledWith(
+      'payment',
+      expect.objectContaining({
+        name: 'PaymentTimeoutClose',
+        idempotencyKey: 'payment-close-p-1',
+      }),
+      expect.objectContaining({ delay: 30 * 60 * 1000 }),
+    );
+  });
+
+  it('延迟关单任务超时窗口可通过 PAYMENT_TIMEOUT_MS 配置', async () => {
+    process.env.PAYMENT_TIMEOUT_MS = '60000';
+    try {
+      deps.orders.findById.mockResolvedValue(order);
+      deps.payments.findByMerchantOrderId.mockResolvedValue(null);
+      deps.payments.create.mockResolvedValue({
+        id: 'p-2', orderId: 'o-1', provider: 'mock', providerTransactionId: 'MOCK1',
+        merchantOrderId: 'ORD1', amount: 101234, refundedAmount: 0, status: 'PENDING',
+        createdAt: new Date(), updatedAt: new Date(),
+      });
+
+      await service.createPayment('o-1', 'mock', 'https://x/cb');
+
+      expect(deps.events.publish).toHaveBeenCalledWith(
+        'payment',
+        expect.anything(),
+        expect.objectContaining({ delay: 60000 }),
+      );
+    } finally {
+      delete process.env.PAYMENT_TIMEOUT_MS;
+    }
+  });
 });

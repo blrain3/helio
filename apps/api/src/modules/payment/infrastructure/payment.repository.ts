@@ -53,6 +53,23 @@ export class PaymentRepository {
     return this.toPaymentEntity(p);
   }
 
+  /**
+   * 条件更新关闭支付（超时关单用）：
+   * 仅当仍处于 PENDING 时流转为 CLOSED，已 SUCCESS/CLOSED/FAILED 则跳过。
+   * 以 `updateMany + where status` 保证原子性与幂等——并发下只有一个请求能命中，
+   * 避免超时任务误关已支付的流水。
+   */
+  async closePending(id: string): Promise<PaymentEntity | null> {
+    const result = await this.prisma.payment.updateMany({
+      where: { id, status: 'PENDING' },
+      data: { status: 'CLOSED' },
+    });
+    if (result.count === 0) {
+      return null; // 已非 PENDING，跳过（不抛错，任务幂等返回）。
+    }
+    return this.findById(id);
+  }
+
   /** 累计退款金额（原子递增，用于退款金额校验）。 */
   async addRefundedAmount(id: string, amount: number): Promise<PaymentEntity | null> {
     const p = await this.prisma.payment.update({
