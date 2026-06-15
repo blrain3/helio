@@ -1,66 +1,55 @@
-# Helio — 太阳能能源监控平台
+# Helio
 
-Helio 是一个太阳能能源监控与管理平台，提供实时发电监控、数据分析、账单管理与支付功能。
+Helio 是一个太阳能电站运营控制台。它覆盖电站与设备管理、计量计费、订单支付、异步结算、异常检测和对账，并将浏览器操作连接到 NestJS API、PostgreSQL、Redis 与 BullMQ worker。
 
-## 核心特性
+## 已验证能力
 
-- **实时能源监控**：采集并展示发电数据、系统效率与历史趋势
-- **数据分析**：聚合统计与智能异常检测（规则引擎 + 滚动统计 + z-score）
-- **计费与账单**：计量 → 计费 → 订单 → 支付的完整闭环
-- **多渠道支付**：接入微信支付 / 支付宝，含回调验签、幂等处理与日对账
-- **多语言与主题**：i18n 国际化 + 深色/浅色主题
+- JWT 登录、刷新令牌轮换和按用户归属的资源访问控制。
+- 电站、设备、账单、订单、支付、退款与异常处理的控制台交互。
+- 受控 Mock 支付演示：支付回调经 API 验签、入队并由 worker 将订单结算为 `COMPLETED`。
+- PostgreSQL 分区时序表、Redis 队列、OpenAPI 生成的 TypeScript API client。
+- Vitest 单元测试、PostgreSQL/Redis Testcontainers 集成测试、Playwright 浏览器流程和 GitHub Actions 质量门禁。
 
-## 技术栈
-
-| 层 | 技术 |
-|---|---|
-| 仓库形态 | pnpm + Turborepo Monorepo |
-| 后端 | NestJS + Fastify Adapter |
-| 前端 | React 19 + TypeScript strict + Vite + Tailwind 4 + shadcn/ui |
-| 数据库 | PostgreSQL（原生分区 + 物化视图） |
-| ORM | Prisma（业务数据）+ Raw SQL（时序/聚合） |
-| 缓存 / 任务 | Redis + BullMQ |
-| 认证 | JWT 双令牌 + Refresh Token Rotation + RBAC |
-| 支付 | PaymentGateway + Mock / 微信 / 支付宝 |
-| API 契约 | OpenAPI → 自动生成 TypeScript Client |
-| 质量与交付 | Vitest + Testcontainers + Playwright + Docker Compose + GitHub Actions |
-
-## 架构
-
-Helio 采用**模块化单体（Modular Monolith）**架构：单一代码库内按业务域划分为多个模块，模块间通过公开接口通信，核心链路以领域事件 + BullMQ 异步解耦。
-
-```
-apps/
-├── api/       # 后端 API（NestJS + Fastify Adapter）
-├── web/       # 前端（React 19 + Vite）
-└── worker/    # 异步任务进程（BullMQ 消费者）
-packages/
-├── api-client/  # OpenAPI 生成的 TypeScript Client
-├── ui/          # 共享 UI 组件
-└── config/      # 共享配置（TypeScript / ESLint）
-```
-
-后端按业务域划分为 7 个模块：`auth`、`user`、`energy`、`billing`、`order`、`payment`、`anomaly`（对账/结算属 `payment` 域，由 worker 定时任务触发）。
+微信和支付宝适配器保留在支付网关边界，但本仓库没有宣称或演示真实渠道结算；自动化和本地展示只使用 Mock 支付。
 
 ## 快速开始
 
 ```bash
-# 1. 安装依赖
 pnpm install
-
-# 2. 启动完整本地演示栈（PostgreSQL、Redis、API、worker、Web）
-docker compose up --build
+docker compose up --build -d
 ```
 
-Web 位于 http://localhost:8080，Swagger 位于 http://localhost:3000/api/docs。
-更多部署与健康检查说明见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+等待 API ready 后打开以下本地地址：
 
-## 环境要求
+| 服务 | 地址 |
+| --- | --- |
+| Web 控制台 | http://localhost:8080 |
+| Swagger | http://localhost:3000/api/docs |
+| API liveness | http://localhost:3000/api/health |
+| API readiness | http://localhost:3000/api/health/ready |
 
-- Node.js ≥ 20
-- pnpm ≥ 9
-- Docker（本地 PostgreSQL / Redis）
+本地 Compose 默认开启受控 Mock 演示。部署到公网前，必须设置强随机 JWT 与内部请求密钥，并显式设置 `NODE_ENV=production` 和 `MOCK_PAYMENT_DEMO_ENABLED=false`。详见 [部署手册](docs/DEPLOYMENT.md)。
 
-## License
+## 质量命令
 
-见 LICENSE 文件。
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:integration
+pnpm test:e2e
+pnpm build
+```
+
+## 文档
+
+- [展示与交付证据](docs/SHOWCASE.md)
+- [演示流程与录屏命令](docs/DEMO.md)
+- [架构说明](docs/ARCHITECTURE.md)
+- [本地开发](docs/DEVELOPMENT.md)
+- [测试计划](docs/TEST-PLAN.md)
+- [部署手册](docs/DEPLOYMENT.md)
+
+## 技术栈
+
+pnpm + Turborepo、React 19、TypeScript strict、NestJS + Fastify、Prisma + PostgreSQL、Redis + BullMQ、OpenAPI、Vitest、Testcontainers、Playwright、Docker Compose 和 GitHub Actions。

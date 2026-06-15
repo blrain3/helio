@@ -1,0 +1,58 @@
+name: Publish Deployment Images
+
+on:
+  workflow_dispatch:
+
+jobs:
+  credentials:
+    name: Check deployment registry configuration
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          HELIO_REGISTRY: ${{ vars.HELIO_REGISTRY }}
+          HELIO_IMAGE_PREFIX: ${{ vars.HELIO_IMAGE_PREFIX }}
+          HELIO_REGISTRY_USERNAME: ${{ secrets.HELIO_REGISTRY_USERNAME }}
+          HELIO_REGISTRY_PASSWORD: ${{ secrets.HELIO_REGISTRY_PASSWORD }}
+        run: |
+          if [ -n "$HELIO_REGISTRY" ] && [ -n "$HELIO_IMAGE_PREFIX" ] && [ -n "$HELIO_REGISTRY_USERNAME" ] && [ -n "$HELIO_REGISTRY_PASSWORD" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Image publishing skipped because registry configuration is absent."
+          fi
+
+  publish:
+    name: Build and publish images
+    needs: credentials
+    if: needs.credentials.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+          - image: worker
+            dockerfile: apps/worker/Dockerfile
+          - image: web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.HELIO_REGISTRY }}
+          username: ${{ secrets.HELIO_REGISTRY_USERNAME }}
+          password: ${{ secrets.HELIO_REGISTRY_PASSWORD }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ vars.HELIO_IMAGE_PREFIX }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ vars.HELIO_IMAGE_PREFIX }}/${{ matrix.image }}:latest

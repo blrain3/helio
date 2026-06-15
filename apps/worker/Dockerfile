@@ -8,8 +8,9 @@ RUN pnpm --filter @helio/api prisma:generate
 RUN pnpm --filter @helio/worker build
 
 FROM node:20-alpine AS runner
-WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/node_modules ./node_modules
+WORKDIR /app/apps/worker
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/apps/worker/node_modules ./node_modules
 COPY --from=builder /app/apps/worker/dist ./dist
 CMD ["node", "dist/main.js"]
