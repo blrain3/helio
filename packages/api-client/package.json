@@ -1,0 +1,16 @@
+{
+  "name": "@helio/api-client",
+  "version": "1.0.0",
+  "private": true,
+  "description": "由 OpenAPI 自动生成的 TypeScript Client（前后端 API 契约）",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "generate": "openapi-typescript ../api/openapi.json -o ./src/schema.d.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.7.2"
+  }
+}

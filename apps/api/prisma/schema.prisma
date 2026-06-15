@@ -1,0 +1,205 @@
+// Helio Prisma Schema
+// 业务数据（有 Domain Entity 的表）由 Prisma 管理
+// 时序数据（energy_record / device_metric / generation_statistic）由 Raw SQL + 分区 + 物化视图管理，不在此定义
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  plants        Plant[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  hash      String    @unique
+  userId    String
+  deviceId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Plant {
+  id        String   @id @default(uuid())
+  name      String
+  capacity  Float // 装机容量 kW
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devices Device[]
+
+  @@index([userId])
+}
+
+model Device {
+  id        String   @id @default(uuid())
+  serialNo  String   @unique
+  plantId   String
+  createdAt DateTime @default(now())
+
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  @@index([plantId])
+}
+
+// 费率：计量 → 计费 的关键实体
+model Tariff {
+  id          String   @id @default(uuid())
+  unitPrice   Int      // 单价，单位：分 / billingUnit
+  currency    String   @default("CNY")
+  billingUnit String   @default("kWh") // 计费单位
+  effectiveAt DateTime
+  createdAt   DateTime @default(now())
+}
+
+// 账单：consumed_kwh × unit_price = total_amount
+model Bill {
+  id          String   @id @default(uuid())
+  plantId     String
+  consumedKwh Float
+  unitPrice   Int      // 分
+  totalAmount Int      // 分，整数运算避免浮点误差
+  periodStart DateTime
+  periodEnd   DateTime
+  status      BillStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+
+  orders Order[]
+
+  @@index([plantId, periodStart])
+}
+
+// 订单
+model Order {
+  id        String      @id @default(uuid())
+  orderNo   String      @unique
+  billId    String?
+  amount    Int         // 分
+  status    OrderStatus @default(CREATED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  bill     Bill?      @relation(fields: [billId], references: [id])
+  payments Payment[]
+
+  @@index([status, createdAt])
+}
+
+// 支付流水
+model Payment {
+  id                    String        @id @default(uuid())
+  orderId               String
+  provider              String        // wechat | alipay | mock
+  providerTransactionId String?
+  merchantOrderId       String        @unique
+  amount                Int           // 分
+  status                PaymentStatus @default(CREATED)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // 回调幂等：防第三方重复通知
+  @@unique([provider, providerTransactionId])
+  @@index([status, createdAt])
+}
+
+// 退款单
+model Refund {
+  id          String        @id @default(uuid())
+  paymentId   String
+  amount      Int           // 分
+  status      RefundStatus  @default(CREATED)
+  createdAt   DateTime      @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+// 原始回调报文（持久化，便于审计）
+model WebhookEvent {
+  id                    String   @id @default(uuid())
+  provider              String
+  providerTransactionId String
+  rawPayload            Json
+  createdAt             DateTime @default(now())
+
+  @@index([provider, providerTransactionId])
+}
+
+// 对账差异记录
+model ReconciliationDiff {
+  id        String   @id @default(uuid())
+  billDate  DateTime
+  type      String   // 差异类型
+  detail    Json
+  status    String   @default("PENDING") // PENDING / MATCHED / DISCREPANCY / RESOLVED
+  createdAt DateTime @default(now())
+
+  @@index([billDate, status])
+}
+
+// 异常检测规则（规则引擎，可配置）
+model AnomalyRule {
+  id        String   @id @default(uuid())
+  name      String
+  condition Json     // 规则条件
+  severity  String   // NORMAL / WARNING / CRITICAL
+  enabled   Boolean  @default(true)
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  USER
+  OPERATOR
+  ADMIN
+}
+
+enum BillStatus {
+  PENDING
+  ISSUED
+  PAID
+}
+
+enum OrderStatus {
+  CREATED
+  PENDING_PAYMENT
+  PAID
+  COMPLETED
+  CLOSED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCESS
+  FAILED
+  CLOSED
+}
+
+enum RefundStatus {
+  CREATED
+  PROCESSING
+  REFUNDED
+  FAILED
+}
