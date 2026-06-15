@@ -28,9 +28,18 @@ Thumbs.db
 # Test / coverage
 coverage/
 .nyc_output/
+.pytest_cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
 
 # Turborepo
 .turbo/
+
+# Prisma 生成的客户端（运行时由 prisma generate 重建）
+apps/api/node_modules/.prisma/
 
 # 内部文档（仅本地保留，不进版本库）
 docs/
