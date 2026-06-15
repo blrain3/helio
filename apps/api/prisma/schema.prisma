@@ -160,12 +160,14 @@ model WebhookEvent {
 model ReconciliationDiff {
   id        String   @id @default(uuid())
   billDate  DateTime
-  type      String   // 差异类型
+  type      String   // 差异类型：DISCREPANCY / MISSING_IN_STATEMENT / MISSING_IN_LOCAL
   detail    Json
-  status    String   @default("PENDING") // PENDING / MATCHED / DISCREPANCY / RESOLVED
+  paymentId String?  // 关联支付流水（退款冻结用；MISSING_IN_LOCAL 无本地流水为 null）
+  status    String   @default("PENDING") // PENDING / RESOLVED
   createdAt DateTime @default(now())
 
   @@index([billDate, status])
+  @@index([paymentId, status])
 }
 
 // 异常检测规则（规则引擎，可配置）
