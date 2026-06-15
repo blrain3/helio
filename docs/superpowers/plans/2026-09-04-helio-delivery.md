@@ -297,37 +297,39 @@ Validation note (2026-09-05): focused authorization and internal-request tests, 
 **Interfaces:**
 - Produces: `pnpm test:integration`, `pnpm test:e2e`, and CI artifacts.
 
-- [ ] **Step 1: Write the first failing PostgreSQL/Redis integration test**
+- [x] **Step 1: Write the first failing PostgreSQL/Redis integration test**
 
 Use Testcontainers to migrate a disposable PostgreSQL instance, start Redis, register/login a user, create a plant/bill/order/payment, send a signed Mock callback and assert settlement state.
 
-- [ ] **Step 2: Run the integration test to verify failure**
+- [x] **Step 2: Run the integration test to verify failure**
 
 Run: `pnpm --filter @helio/api test:integration`
 
 Expected: failure because the script/test setup is absent.
 
-- [ ] **Step 3: Add test infrastructure and worker tests**
+- [x] **Step 3: Add test infrastructure and worker tests**
 
 Create controlled database/Redis lifecycle helpers, execute all Prisma migrations, test worker settlement and internal signing, and guarantee cleanup from `afterAll` even when assertions fail.
 
-- [ ] **Step 4: Add Playwright core-flow test**
+- [x] **Step 4: Add Playwright core-flow test**
 
 Start the application dependencies through Playwright `webServer`, seed an admin user, execute browser login, plant inspection, bill/order/payment actions, Mock callback and completed-order assertion.
 
-- [ ] **Step 5: Integrate tests into CI**
+- [x] **Step 5: Integrate tests into CI**
 
 Use Docker service containers or Compose in GitHub Actions, cache pnpm, upload Playwright reports/screenshots on failure, and make the final build job depend on all quality jobs.
 
-- [ ] **Step 6: Verify all test layers**
+- [x] **Step 6: Verify all test layers**
 
 Run: `pnpm test`, `pnpm test:integration`, `pnpm test:e2e`, `pnpm lint`, `pnpm typecheck`, `pnpm build`
 
 Expected: all commands exit 0. If local Docker is unavailable, run unit/static checks and retain the CI service-container verification path.
 
-- [ ] **Step 7: Commit and push**
+- [x] **Step 7: Commit and push**
 
 Run: `git add apps e2e scripts package.json turbo.json .github && git commit -m "test: add full-stack delivery coverage" && git push`
+
+Validation note (2026-09-05): API integration starts compiled API and worker processes against disposable PostgreSQL 16 and Redis 7 containers, runs all Prisma migrations, and verifies the Mock payment settlement. The E2E runner seeds the admin, builds the Web app against the same temporary API, and verifies login through completed order in Chromium. `pnpm test` (API 136, worker 3, Web 44, API client 2), `pnpm test:integration`, `pnpm test:e2e`, `pnpm lint`, `pnpm typecheck`, and `pnpm build` passed. CI runs independent integration and E2E jobs; failed browser artifacts are uploaded.
 
 ### Task 7: Package evidence and deployment handoff
 
