@@ -23,7 +23,7 @@ export function createAuthenticatedClient(
   options: AuthenticatedClientOptions,
 ): HelioClient {
   let refreshInFlight:
-    | { refreshToken: string; promise: Promise<void> }
+    | { refreshToken: string; promise: Promise<SessionData | null> }
     | undefined;
   const publicClient = createHelioClient({
     baseUrl: options.baseUrl,
@@ -49,23 +49,26 @@ export function createAuthenticatedClient(
           throw error;
         }
 
-        await refreshSession(session);
+        const refreshedSession = await refreshSession(session);
+        if (!refreshedSession || !holdsRefreshToken(refreshedSession.refreshToken)) {
+          throw error;
+        }
 
         return authenticatedClient.request<T>(path, requestOptions);
       }
     },
   };
 
-  async function refreshSession(session: SessionData): Promise<void> {
+  async function refreshSession(session: SessionData): Promise<SessionData | null> {
     if (!holdsRefreshToken(session.refreshToken)) {
-      return;
+      return null;
     }
 
     let inFlight = refreshInFlight;
     if (!inFlight || inFlight.refreshToken !== session.refreshToken) {
       inFlight = {
         refreshToken: session.refreshToken,
-        promise: Promise.resolve(),
+        promise: Promise.resolve(null),
       };
       inFlight.promise = requestRefresh(session).finally(() => {
         if (refreshInFlight === inFlight) {
@@ -76,16 +79,17 @@ export function createAuthenticatedClient(
     }
 
     try {
-      await inFlight.promise;
+      return await inFlight.promise;
     } catch (error) {
       if (holdsRefreshToken(session.refreshToken)) {
         options.sessions.clearSession();
+        throw error;
       }
-      throw error;
+      return null;
     }
   }
 
-  async function requestRefresh(session: SessionData): Promise<void> {
+  async function requestRefresh(session: SessionData): Promise<SessionData | null> {
     const refreshed = await publicClient.request<TokenPairResponse>('/auth/refresh', {
       method: 'POST',
       body: {
@@ -94,9 +98,12 @@ export function createAuthenticatedClient(
       },
     });
     const current = options.sessions.getSession();
-    if (current?.refreshToken === session.refreshToken) {
-      options.sessions.saveSession(withTokens(current, refreshed.tokens));
+    if (current?.refreshToken !== session.refreshToken) {
+      return null;
     }
+    const refreshedSession = withTokens(current, refreshed.tokens);
+    options.sessions.saveSession(refreshedSession);
+    return refreshedSession;
   }
 
   function holdsRefreshToken(refreshToken: string): boolean {

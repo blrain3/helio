@@ -22,7 +22,7 @@ import { Public } from '../../../common/decorators/public.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { PaymentEntity, RefundEntity } from '../domain/payment.entity';
 import { AuthUser } from '../../auth/domain/user.entity';
-import { UnauthorizedError } from '../../auth/domain/errors';
+import { ForbiddenError, UnauthorizedError } from '../../auth/domain/errors';
 
 /**
  * 支付控制器：支付创建、回调、退款、对账。
@@ -75,6 +75,10 @@ export class PaymentController {
   @ApiOperation({ summary: '支付回调（验签→落库→幂等→金额校验→状态流转→ACK）' })
   @ApiResponse({ status: 200, description: 'ACK' })
   async callback(@Body() dto: PaymentCallbackDto): Promise<{ ack: string }> {
+    if (dto.provider === 'mock') {
+      throw new ForbiddenError('Mock 支付回调仅可由受控演示流程处理');
+    }
+
     return this.payments.handleCallback({
       provider: dto.provider,
       providerTransactionId: dto.providerTransactionId,
