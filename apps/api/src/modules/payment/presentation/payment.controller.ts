@@ -12,13 +12,16 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentService } from '../application/payment.service';
 import { ReconciliationService } from '../application/reconciliation.service';
+import { MockPaymentService } from '../application/mock-payment.service';
 import {
   CreatePaymentDto,
   RefundDto,
   PaymentCallbackDto,
 } from '../application/dto/payment.dto';
 import { Public } from '../../../common/decorators/public.decorator';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { PaymentEntity, RefundEntity } from '../domain/payment.entity';
+import { AuthUser } from '../../auth/domain/user.entity';
 import { UnauthorizedError } from '../../auth/domain/errors';
 
 /**
@@ -31,7 +34,16 @@ export class PaymentController {
   constructor(
     private readonly payments: PaymentService,
     private readonly reconciliation: ReconciliationService,
+    private readonly mockPayments: MockPaymentService,
   ) {}
+
+  @Get()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '查询当前用户支付流水' })
+  @ApiResponse({ status: 200, description: '支付流水列表' })
+  async list(@CurrentUser() user: AuthUser): Promise<PaymentEntity[]> {
+    return this.payments.listByUser(user.sub);
+  }
 
   @Post()
   @ApiBearerAuth()
@@ -43,6 +55,15 @@ export class PaymentController {
       dto.provider ?? 'mock',
       dto.notifyUrl ?? '',
     );
+  }
+
+  @Post(':id/mock-complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '开发环境完成 Mock 支付并触发已签名回调' })
+  @ApiResponse({ status: 200, description: 'Mock 回调已处理' })
+  async completeMockPayment(@Param('id') id: string): Promise<{ ack: string }> {
+    return this.mockPayments.complete(id);
   }
 
   @Post('callback')

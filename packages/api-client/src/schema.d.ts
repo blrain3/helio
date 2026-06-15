@@ -212,6 +212,24 @@ export interface paths {
         patch: operations["EnergyController_updatePlant"];
         trace?: never;
     };
+    "/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询当前用户名下设备 */
+        get: operations["EnergyController_listUserDevices"];
+        put?: never;
+        /** 创建设备（挂靠在电站下） */
+        post: operations["EnergyController_createDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plants/{plantId}/devices": {
         parameters: {
             query?: never;
@@ -246,23 +264,6 @@ export interface paths {
         head?: never;
         /** 更新设备 */
         patch: operations["EnergyController_updateDevice"];
-        trace?: never;
-    };
-    "/devices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 创建设备（挂靠在电站下） */
-        post: operations["EnergyController_createDevice"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/tariffs": {
@@ -368,6 +369,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询当前用户账单列表 */
+        get: operations["BillingController_list"];
+        put?: never;
+        /** 生成账单（按周期生效费率计算金额） */
+        post: operations["BillingController_generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bills/{id}": {
         parameters: {
             query?: never;
@@ -402,23 +421,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/bills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 生成账单（按周期生效费率计算金额） */
-        post: operations["BillingController_generate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/bills/{id}/issue": {
         parameters: {
             query?: never;
@@ -436,6 +438,24 @@ export interface paths {
         patch: operations["BillingController_issue"];
         trace?: never;
     };
+    "/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询当前用户订单列表 */
+        get: operations["OrderController_list"];
+        put?: never;
+        /** 创建订单（基于账单，金额校验） */
+        post: operations["OrderController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{id}": {
         parameters: {
             query?: never;
@@ -447,23 +467,6 @@ export interface paths {
         get: operations["OrderController_findById"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/orders": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 创建订单（基于账单，金额校验） */
-        post: operations["OrderController_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -545,10 +548,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** 查询当前用户支付流水 */
+        get: operations["PaymentController_list"];
         put?: never;
         /** 创建支付（下单） */
         post: operations["PaymentController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{id}/mock-complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 开发环境完成 Mock 支付并触发已签名回调 */
+        post: operations["PaymentController_completeMockPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -721,6 +742,23 @@ export interface paths {
         put?: never;
         /** 触发即时异常检测 */
         post: operations["AnomalyController_detect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anomalies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询当前用户异常事件 */
+        get: operations["AnomalyController_listUserEvents"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1087,6 +1125,42 @@ export interface operations {
             };
         };
     };
+    EnergyController_listUserDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 设备列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EnergyController_createDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 创建成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     EnergyController_listDevices: {
         parameters: {
             query?: never;
@@ -1152,24 +1226,6 @@ export interface operations {
         responses: {
             /** @description 更新成功 */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    EnergyController_createDevice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 创建成功 */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1303,6 +1359,42 @@ export interface operations {
             };
         };
     };
+    BillingController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 账单列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_generate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 账单已生成 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     BillingController_findById: {
         parameters: {
             query?: never;
@@ -1339,24 +1431,6 @@ export interface operations {
             };
         };
     };
-    BillingController_generate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 账单已生成 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     BillingController_issue: {
         parameters: {
             query?: never;
@@ -1375,7 +1449,7 @@ export interface operations {
             };
         };
     };
-    OrderController_findById: {
+    OrderController_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -1384,7 +1458,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 订单信息 */
+            /** @description 订单列表 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1404,6 +1478,24 @@ export interface operations {
         responses: {
             /** @description 订单已创建 */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrderController_findById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 订单信息 */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1483,6 +1575,24 @@ export interface operations {
             };
         };
     };
+    PaymentController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 支付流水列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PaymentController_create: {
         parameters: {
             query?: never;
@@ -1494,6 +1604,24 @@ export interface operations {
         responses: {
             /** @description 支付已创建 */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PaymentController_completeMockPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mock 回调已处理 */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1710,6 +1838,24 @@ export interface operations {
         responses: {
             /** @description 命中的告警（已落库） */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AnomalyController_listUserEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 异常事件列表 */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

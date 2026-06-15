@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PaymentController } from './presentation/payment.controller';
 import { PaymentService } from './application/payment.service';
+import { MockPaymentService } from './application/mock-payment.service';
 import { ReconciliationService } from './application/reconciliation.service';
 import { PaymentRepository } from './infrastructure/payment.repository';
 import { ReconciliationRepository } from './infrastructure/reconciliation.repository';
@@ -22,6 +23,7 @@ import { OrderModule } from '../order/order.module';
   controllers: [PaymentController],
   providers: [
     PaymentService,
+    MockPaymentService,
     ReconciliationService,
     PaymentRepository,
     ReconciliationRepository,

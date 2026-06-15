@@ -36,6 +36,14 @@ export class OrderService {
     return order;
   }
 
+  async listByUser(userId: string): Promise<OrderEntity[]> {
+    const plants = await this.plants.findByUserId(userId);
+    const billGroups = await Promise.all(
+      plants.map((plant) => this.bills.findByPlantId(plant.id)),
+    );
+    return this.orders.findByBillIds(billGroups.flat().map((bill) => bill.id));
+  }
+
   /**
    * 创建订单（基于账单）：
    * 1. 校验账单存在；
