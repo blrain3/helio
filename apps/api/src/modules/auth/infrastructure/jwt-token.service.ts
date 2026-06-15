@@ -4,7 +4,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   AccessTokenPayload,
   RefreshTokenPayload,
-  TokenPair,
 } from '../domain/token.types';
 import { AuthUser, UserEntity } from '../domain/user.entity';
 

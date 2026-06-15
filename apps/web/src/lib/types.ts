@@ -2,7 +2,7 @@
  * 前端领域类型（与后端 API 契约对齐，金额统一为「分」）。
  */
 
-export type PlantStatus = 'ONLINE' | 'OFFLINE' | 'FAULT';
+export type PlantStatus = 'ONLINE' | 'OFFLINE' | 'FAULT' | 'UNKNOWN';
 
 export interface Plant {
   id: string;

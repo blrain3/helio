@@ -36,7 +36,6 @@ function createWorker(queueName: string, routes: Record<string, Handler>): Worke
       const handler = routes[name];
       if (!handler) {
         // 未知事件名：视为成功（避免阻塞队列），记录日志。
-        // eslint-disable-next-line no-console
         console.warn(`[Worker] 未知事件 ${name}，跳过`);
         return;
       }
@@ -51,11 +50,9 @@ function createWorker(queueName: string, routes: Record<string, Handler>): Worke
   );
 
   worker.on('completed', (job) => {
-    // eslint-disable-next-line no-console
     console.log(`[Worker] ${queueName} 完成: ${job.id} (${job.data?.name})`);
   });
   worker.on('failed', (job, err) => {
-    // eslint-disable-next-line no-console
     console.error(`[Worker] ${queueName} 失败: ${job?.id}`, err.message);
   });
 
@@ -89,15 +86,12 @@ void reconciliationQueue
     { jobId: 'reconcile-daily', repeat: { pattern: '30 1 * * *' } },
   )
   .then(() => {
-    // eslint-disable-next-line no-console
     console.log('[Helio Worker] 日对账定时任务已注册（每日 01:30）');
   })
   .catch((err: Error) => {
-    // eslint-disable-next-line no-console
     console.error('[Helio Worker] 日对账定时任务注册失败', err.message);
   });
 
-// eslint-disable-next-line no-console
 console.log('[Helio Worker] queues & workers initialized');
 
 // 优雅关闭。

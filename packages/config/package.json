@@ -6,6 +6,13 @@
   "files": [
     "tsconfig.base.json"
   ],
+  "scripts": {
+    "verify": "node -e \"JSON.parse(require('node:fs').readFileSync('tsconfig.base.json', 'utf8'));\"",
+    "build": "pnpm run verify",
+    "lint": "pnpm run verify",
+    "test": "pnpm run verify",
+    "typecheck": "pnpm run verify"
+  },
   "dependencies": {
     "typescript": "^5.7.2"
   }

@@ -48,15 +48,12 @@ packages/
 # 1. 安装依赖
 pnpm install
 
-# 2. 启动基础设施（PostgreSQL + Redis）
-docker compose up -d postgres redis
-
-# 3. 初始化数据库
-pnpm --filter @helio/api db:migrate
-
-# 4. 启动开发环境
-pnpm dev
+# 2. 启动完整本地演示栈（PostgreSQL、Redis、API、worker、Web）
+docker compose up --build
 ```
+
+Web 位于 http://localhost:8080，Swagger 位于 http://localhost:3000/api/docs。
+更多部署与健康检查说明见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
 ## 环境要求
 

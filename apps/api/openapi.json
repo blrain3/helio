@@ -1,0 +1,1035 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_liveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API 进程存活"
+          }
+        },
+        "summary": "存活检查",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_readiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API 与数据库均可用"
+          },
+          "503": {
+            "description": "数据库尚未就绪"
+          }
+        },
+        "summary": "就绪检查",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "注册成功，返回令牌对与用户信息"
+          },
+          "409": {
+            "description": "邮箱已注册"
+          }
+        },
+        "summary": "用户注册",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "登录成功，返回令牌对与用户信息"
+          },
+          "401": {
+            "description": "邮箱或密码错误"
+          }
+        },
+        "summary": "用户登录",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "刷新成功，旧令牌作废"
+          },
+          "401": {
+            "description": "刷新令牌无效或已过期"
+          }
+        },
+        "summary": "刷新令牌（Rotation）",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "登出（撤销当前设备令牌）",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "当前用户"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前用户信息",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "UserController_findById",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按 id 查询用户",
+        "tags": [
+          "user"
+        ]
+      },
+      "delete": {
+        "operationId": "UserController_remove",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除用户",
+        "tags": [
+          "user"
+        ]
+      }
+    },
+    "/users": {
+      "post": {
+        "operationId": "UserController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          },
+          "403": {
+            "description": "权限不足"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "管理员创建用户（可指定角色）",
+        "tags": [
+          "user"
+        ]
+      }
+    },
+    "/users/{id}/role": {
+      "patch": {
+        "operationId": "UserController_updateRole",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "403": {
+            "description": "权限不足"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "调整用户角色",
+        "tags": [
+          "user"
+        ]
+      }
+    },
+    "/plants": {
+      "get": {
+        "operationId": "EnergyController_listPlants",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "电站列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询当前用户名下电站",
+        "tags": [
+          "energy"
+        ]
+      },
+      "post": {
+        "operationId": "EnergyController_createPlant",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建电站",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/plants/{id}": {
+      "get": {
+        "operationId": "EnergyController_getPlant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "电站信息"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按 id 查询电站",
+        "tags": [
+          "energy"
+        ]
+      },
+      "patch": {
+        "operationId": "EnergyController_updatePlant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新电站",
+        "tags": [
+          "energy"
+        ]
+      },
+      "delete": {
+        "operationId": "EnergyController_removePlant",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除电站",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/plants/{plantId}/devices": {
+      "get": {
+        "operationId": "EnergyController_listDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "设备列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询电站下设备列表",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/devices/{id}": {
+      "get": {
+        "operationId": "EnergyController_getDevice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "设备信息"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按 id 查询设备",
+        "tags": [
+          "energy"
+        ]
+      },
+      "patch": {
+        "operationId": "EnergyController_updateDevice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新设备",
+        "tags": [
+          "energy"
+        ]
+      },
+      "delete": {
+        "operationId": "EnergyController_removeDevice",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除设备",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/devices": {
+      "post": {
+        "operationId": "EnergyController_createDevice",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建设备（挂靠在电站下）",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/tariffs": {
+      "get": {
+        "operationId": "EnergyController_listTariffs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "费率列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询全部费率（按生效时间倒序）",
+        "tags": [
+          "energy"
+        ]
+      },
+      "post": {
+        "operationId": "EnergyController_createTariff",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建费率",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/tariffs/{id}": {
+      "delete": {
+        "operationId": "EnergyController_removeTariff",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除费率",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/energy-records": {
+      "post": {
+        "operationId": "EnergyController_recordEnergy",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "写入成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "写入发电记录（自动建分区）",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/plants/{plantId}/energy-records": {
+      "get": {
+        "operationId": "EnergyController_listEnergyRecords",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "发电记录列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询电站发电记录（区间）",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/plants/{plantId}/energy/daily": {
+      "get": {
+        "operationId": "EnergyController_dailyAggregate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "按天聚合结果"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "电站日发电聚合",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/plants/{plantId}/energy/total": {
+      "get": {
+        "operationId": "EnergyController_totalAggregate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "总发电量汇总"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "电站区间总发电量",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
+    "/bills/{id}": {
+      "get": {
+        "operationId": "BillingController_findById",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "账单信息"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按 id 查询账单",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/bills/plant/{plantId}": {
+      "get": {
+        "operationId": "BillingController_listByPlant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "账单列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询电站账单列表",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/bills": {
+      "post": {
+        "operationId": "BillingController_generate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "账单已生成"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "生成账单（按周期生效费率计算金额）",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/bills/{id}/issue": {
+      "patch": {
+        "operationId": "BillingController_issue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "账单已发出"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "发出账单（PENDING → ISSUED）",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "OrderController_findById",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "订单信息"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "按 id 查询订单",
+        "tags": [
+          "order"
+        ]
+      }
+    },
+    "/orders": {
+      "post": {
+        "operationId": "OrderController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "订单已创建"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建订单（基于账单，金额校验）",
+        "tags": [
+          "order"
+        ]
+      }
+    },
+    "/orders/{id}/submit-payment": {
+      "patch": {
+        "operationId": "OrderController_submitPayment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "已进入待支付"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "提交支付（CREATED → PENDING_PAYMENT）",
+        "tags": [
+          "order"
+        ]
+      }
+    },
+    "/orders/{id}/confirm-paid": {
+      "patch": {
+        "operationId": "OrderController_confirmPaid",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "支付成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "确认支付成功（PENDING_PAYMENT → PAID，联动账单）",
+        "tags": [
+          "order"
+        ]
+      }
+    },
+    "/orders/{id}/complete": {
+      "patch": {
+        "operationId": "OrderController_complete",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "订单已完成"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "完成订单（PAID → COMPLETED）",
+        "tags": [
+          "order"
+        ]
+      }
+    },
+    "/orders/{id}/close": {
+      "patch": {
+        "operationId": "OrderController_close",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "订单已关闭"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "关闭订单（超时/取消 → CLOSED）",
+        "tags": [
+          "order"
+        ]
+      }
+    },
+    "/payments": {
+      "post": {
+        "operationId": "PaymentController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "支付已创建"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建支付（下单）",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/callback": {
+      "post": {
+        "operationId": "PaymentController_callback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "ACK"
+          }
+        },
+        "summary": "支付回调（验签→落库→幂等→金额校验→状态流转→ACK）",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/{id}": {
+      "get": {
+        "operationId": "PaymentController_findById",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "支付流水信息"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询支付流水",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/{id}/close": {
+      "patch": {
+        "operationId": "PaymentController_close",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "支付已关闭"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "关闭支付",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/{id}/refund": {
+      "post": {
+        "operationId": "PaymentController_refund",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "退款单已创建"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "发起退款",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/reconcile/daily": {
+      "post": {
+        "operationId": "PaymentController_reconcile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "对账结果"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "执行日对账",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/reconcile/daily/internal": {
+      "post": {
+        "operationId": "PaymentController_reconcileInternal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "对账结果"
+          }
+        },
+        "summary": "内部触发日对账（worker 定时调用，x-internal-token 校验）",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/reconcile/diff/{id}/resolve": {
+      "patch": {
+        "operationId": "PaymentController_resolveDiff",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "差异已解决"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "解决对账差异（PENDING → RESOLVED，解锁冻结退款）",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/anomaly-rules": {
+      "get": {
+        "operationId": "AnomalyController_listRules",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "规则列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询检测规则",
+        "tags": [
+          "anomaly"
+        ]
+      },
+      "post": {
+        "operationId": "AnomalyController_createRule",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建检测规则",
+        "tags": [
+          "anomaly"
+        ]
+      }
+    },
+    "/anomaly-rules/{id}": {
+      "patch": {
+        "operationId": "AnomalyController_updateRule",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新检测规则（版本 +1）",
+        "tags": [
+          "anomaly"
+        ]
+      },
+      "delete": {
+        "operationId": "AnomalyController_removeRule",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "删除成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "删除检测规则",
+        "tags": [
+          "anomaly"
+        ]
+      }
+    },
+    "/anomaly/detect": {
+      "post": {
+        "operationId": "AnomalyController_detect",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "命中的告警（已落库）"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "触发即时异常检测",
+        "tags": [
+          "anomaly"
+        ]
+      }
+    },
+    "/plants/{plantId}/anomaly-events": {
+      "get": {
+        "operationId": "AnomalyController_listEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "异常事件列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询电站异常事件",
+        "tags": [
+          "anomaly"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Helio API",
+    "description": "Helio 太阳能能源监控平台 API",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {}
+  }
+}
