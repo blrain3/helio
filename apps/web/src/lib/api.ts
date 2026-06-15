@@ -5,6 +5,7 @@ import type {
   Order,
   Payment,
   Anomaly,
+  DailyEnergyPoint,
 } from './types';
 import type { HelioRequestOptions } from '@helio/api-client';
 import { authenticatedClient } from './api-client';
@@ -53,6 +54,7 @@ interface PaymentResponse {
   provider: Payment['provider'];
   providerTransactionId: string | null;
   amount: number;
+  refundedAmount: number;
   status: Payment['status'];
   createdAt: string;
 }
@@ -73,6 +75,8 @@ export const queryKeys = {
   orders: ['orders'] as const,
   payments: ['payments'] as const,
   anomalies: ['anomalies'] as const,
+  dailyEnergy: (plantId: string, start: string, end: string) =>
+    ['daily-energy', plantId, start, end] as const,
 };
 
 type QueryKey = readonly unknown[];
@@ -140,6 +144,10 @@ export function createApi(client: ApiTransport, options: CreateApiOptions = {}) 
         status: 'OPEN',
         createdAt: event.detectedAt,
       }));
+    },
+    listDailyEnergy: (plantId: string, start: string, end: string): Promise<DailyEnergyPoint[]> => {
+      const search = new URLSearchParams({ start, end });
+      return client.request<DailyEnergyPoint[]>(`/plants/${plantId}/energy/daily?${search.toString()}`);
     },
     createPlant: (body: { name: string; capacity: number; location?: string }) =>
       mutate<PlantResponse>('/plants', { method: 'POST', body }, [queryKeys.plants]),
