@@ -8,7 +8,10 @@ vi.mock('../../components/AeroShards', () => ({
   default: () => <div data-testid="aero-shards" aria-hidden="true" />,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe('ClientDemoPage', () => {
   it('presents a client-facing energy overview with the AeroShards visual', () => {
@@ -25,5 +28,19 @@ describe('ClientDemoPage', () => {
     expect(screen.getByText('碳减排')).toBeTruthy();
     expect(screen.getByText('电站运行正常')).toBeTruthy();
     expect(screen.getByRole('link', { name: '进入我的电站' }).getAttribute('href')).toBe('/auth/login');
+  });
+
+  it('uses the supplied Helio mark and formats the current date with its weekday', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 7, 12, 0, 0));
+
+    render(
+      <MemoryRouter initialEntries={['/client-demo']}>
+        <ClientDemoPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('img', { name: 'Helio' }).getAttribute('src')).toBe('/helio-logo.png');
+    expect(screen.getByText('2026.09.07 · 星期一')).toBeTruthy();
   });
 });

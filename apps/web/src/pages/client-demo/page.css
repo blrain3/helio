@@ -65,14 +65,21 @@
   letter-spacing: 0.01em;
 }
 
-.client-brand__mark {
+.client-brand__logo-frame {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 154px;
+  height: 52px;
   place-items: center;
-  color: #071512;
-  background: #f5c84b;
-  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 3px;
+}
+
+.client-brand__logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .client-header__nav {
@@ -400,6 +407,11 @@
 
   .client-header__nav {
     gap: 0;
+  }
+
+  .client-brand__logo-frame {
+    width: 132px;
+    height: 45px;
   }
 
   .client-hero__content {

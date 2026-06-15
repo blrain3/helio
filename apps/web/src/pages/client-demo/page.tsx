@@ -33,6 +33,7 @@ const metrics = [
 
 export function Component() {
   const [visualFallback, setVisualFallback] = useState(false);
+  const currentDate = formatClientDate(new Date());
 
   return (
     <main className={`client-demo${visualFallback ? ' client-demo--visual-fallback' : ''}`}>
@@ -73,8 +74,9 @@ export function Component() {
         <div className="client-hero__inner">
           <header className="client-header">
             <Link className="client-brand" to="/client-demo" aria-label="Helio 客户端首页">
-              <span className="client-brand__mark"><Sun size={18} strokeWidth={2.5} /></span>
-              <span>Helio</span>
+              <span className="client-brand__logo-frame">
+                <img className="client-brand__logo" src="/helio-logo.png" alt="Helio" />
+              </span>
             </Link>
             <nav className="client-header__nav" aria-label="客户端导航">
               <span className="client-header__current">我的能源</span>
@@ -101,7 +103,7 @@ export function Component() {
 
           <div className="client-hero__footer">
             <span className="client-scroll-hint"><span className="client-scroll-hint__line" /> 今日能源表现</span>
-            <span className="client-hero__date">2025.06.18 · 星期三</span>
+            <time className="client-hero__date" dateTime={currentDate.dateTime}>{currentDate.label}</time>
           </div>
         </div>
       </section>
@@ -148,4 +150,17 @@ export function Component() {
       </section>
     </main>
   );
+}
+
+const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'] as const;
+
+export function formatClientDate(date: Date): { dateTime: string; label: string } {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return {
+    dateTime: `${year}-${month}-${day}`,
+    label: `${year}.${month}.${day} · ${WEEKDAYS[date.getDay()]}`,
+  };
 }
