@@ -70,9 +70,9 @@ curl -fsS https://<web-host>/
 
 只有四个端点均可访问后，才将实际 URL 写入 README 和 `docs/SHOWCASE.md`。
 
-## VPS + Caddy
+## VPS + Nginx
 
-生产部署使用 `docker-compose.production.yml` 覆盖本地 Compose。该覆盖文件不发布 PostgreSQL、Redis 或 API 端口；Web 仅监听 VPS 的 `127.0.0.1:8080`，由 Caddy 提供唯一的公网 HTTPS 入口。需要 Docker Compose v2.24 或更高版本以支持 `!reset` 和 `!override` 端口覆盖。
+生产部署使用 `docker-compose.production.yml` 覆盖本地 Compose。该覆盖文件不发布 PostgreSQL、Redis 或 API 端口；Web 仅监听 VPS 的 `127.0.0.1:8080`，由宿主机 Nginx 提供唯一的公网 HTTPS 入口。需要 Docker Compose v2.24 或更高版本以支持 `!reset` 和 `!override` 端口覆盖。
 
 在 VPS 的仓库目录执行：
 
@@ -93,12 +93,25 @@ sudo docker compose --env-file .env.production -f docker-compose.yml -f docker-c
 curl -fsS http://127.0.0.1:8080/api/health/ready
 ```
 
-将 `deploy/Caddyfile.example` 的域名替换为真实域名后安装为 `/etc/caddy/Caddyfile`，再执行：
+安装 Nginx 与 Certbot，将 `deploy/nginx.conf.example` 的域名替换为实际域名后安装为 `/etc/nginx/sites-available/helio`，禁用 Nginx 默认站点并启用 Helio 站点：
 
 ```bash
-sudo systemctl reload caddy
+sudo apt-get update
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+sudo install -m 644 deploy/nginx.conf.example /etc/nginx/sites-available/helio
+sudo sed -i 's/helio.example.com/<domain>/g' /etc/nginx/sites-available/helio
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/helio /etc/nginx/sites-enabled/helio
+sudo nginx -t
+sudo systemctl enable --now nginx
+sudo certbot --nginx --redirect --non-interactive --agree-tos --email <ops-email> -d <domain>
+```
+
+证书签发后，把 `.env.production` 中的 `FRONTEND_URL` 与 `WEBHOOK_BASE_URL` 改为 `https://<domain>`，然后重新执行生产 Compose 的 `up -d`。验证：
+
+```bash
 curl -fsS https://<domain>/api/health/ready
 curl -fsS https://<domain>/api/docs
 ```
 
-Cloudflare DNS 的 A 记录需要先指向 VPS。首次签发证书时使用 DNS only；确认 Caddy 已获得证书后，可启用代理并将 Cloudflare SSL/TLS 模式设为 Full (strict)。防火墙与云安全组仅放行 SSH、HTTP 和 HTTPS。
+Cloudflare DNS 的 A 记录需要先指向 VPS。签发完成后，将 Cloudflare SSL/TLS 加密模式设为 `Full (strict)`。若 HTTP-01 验证被 Cloudflare 规则拦截，临时将该记录切为 DNS only，完成签发后再恢复代理。防火墙与云安全组仅放行 SSH、HTTP 和 HTTPS。
