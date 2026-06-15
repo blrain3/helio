@@ -43,3 +43,9 @@ export class ValidationError extends DomainError {
   readonly code = 'VALIDATION_ERROR';
   readonly statusCode = 400;
 }
+
+/** 支付网关/渠道失败：凭据未配置、渠道接口异常、账单下载/解析失败。 */
+export class PaymentGatewayError extends DomainError {
+  readonly code = 'PAYMENT_GATEWAY_ERROR';
+  readonly statusCode = 502;
+}
