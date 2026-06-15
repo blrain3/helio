@@ -13,7 +13,7 @@ function makeConfig(values: Record<string, string> = {}) {
 }
 
 describe('PaymentGatewayProvider', () => {
-  const mock = new MockGateway();
+  const mock = new MockGateway({} as never);
   const wechat = new WeChatGateway(makeConfig() as never);
   const alipay = new AlipayGateway(makeConfig() as never);
 

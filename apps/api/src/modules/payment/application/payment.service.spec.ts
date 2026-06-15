@@ -37,7 +37,7 @@ describe('Payment state machine', () => {
 });
 
 describe('MockGateway', () => {
-  const gateway = new MockGateway();
+  const gateway = new MockGateway({} as never);
 
   it('createPayment 生成渠道交易号与支付链接', async () => {
     const result = await gateway.createPayment({
@@ -106,7 +106,7 @@ describe('PaymentService.handleCallback（七步回调链路）', () => {
       createWebhookEvent: vi.fn(),
       createRefund: vi.fn(),
     },
-    gateway: new MockGateway(),
+    gateway: new MockGateway({} as never),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
     reconciliation: { findPendingByPaymentId: vi.fn() },
@@ -247,7 +247,7 @@ describe('PaymentService.refund（退款金额校验）', () => {
       createWebhookEvent: vi.fn(),
       createRefund: vi.fn(),
     },
-    gateway: new MockGateway(),
+    gateway: new MockGateway({} as never),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
     reconciliation: { findPendingByPaymentId: vi.fn() },
@@ -321,7 +321,7 @@ describe('PaymentService.createPayment（下单）', () => {
       createWebhookEvent: vi.fn(),
       createRefund: vi.fn(),
     },
-    gateway: new MockGateway(),
+    gateway: new MockGateway({} as never),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
     reconciliation: { findPendingByPaymentId: vi.fn() },

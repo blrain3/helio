@@ -8,6 +8,7 @@ import {
   CreatePaymentRequest,
   CreatePaymentResult,
   PaymentCallback,
+  RawStatementRow,
 } from '../domain/payment.entity';
 
 /**
@@ -103,6 +104,19 @@ export class AlipayGateway implements PaymentGateway {
       callback.amount,
     );
     return expected === callback.signature;
+  }
+
+  /**
+   * 下载对账单（骨架）：真实场景调用 alipay.data.dataservice.bill.downloadurl.query
+   * 获取账单下载地址，再下载 zip/csv 并解析。
+   * 当前骨架在未配置凭据时返回空账单行（无对账单数据），
+   * 上层对账据此将本地流水标记为 MISSING_IN_STATEMENT。
+   */
+  async downloadBill(billDate: Date): Promise<RawStatementRow[]> {
+    this.logger.warn(
+      `支付宝对账单下载为骨架实现（billDate=${billDate.toISOString().slice(0, 10)}），返回空账单`,
+    );
+    return [];
   }
 
   /** 生成回调签名（联调/测试便利）。真实场景由支付宝使用商户私钥生成。 */

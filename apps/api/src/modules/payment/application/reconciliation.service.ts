@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { ReconciliationRepository } from '../infrastructure/reconciliation.repository';
+import { PaymentGatewayProvider } from '../infrastructure/gateway.provider';
 import { ValidationError, NotFoundError } from '../../auth/domain/errors';
 import {
+  RawStatementRow,
   ReconciliationDiffStatus,
   ReconciliationDiffType,
   canTransitionReconciliationDiff,
@@ -23,23 +25,30 @@ export interface ReconciliationItem {
   paymentId: string | null;
 }
 
+/** 解析/规范化后的对账行（与本地支付流水对齐的字段）。 */
+export interface ParsedStatementRow {
+  merchantOrderId: string;
+  amount: number;
+  status: string;
+}
+
 /**
  * 对账服务：本地支付记录 ↕ 第三方支付账单 的日对账（闭环，对应方案 C5）。
  *
  * 闭环（避免沦为「只读报表」）：
- *   下载对账单 → 解析 → 匹配 → 差异检测 → 差异落库（PENDING，冻结退款）
- *   → resolveDiff 确认后置 RESOLVED（解锁退款）。
+ *   下载对账单（经 PaymentGatewayProvider.downloadBill）→ 解析 → 匹配 → 差异检测
+ *   → 差异落库（PENDING，冻结退款）→ resolveDiff 确认后置 RESOLVED（解锁退款）。
  *
  * 差异关联的支付流水在「未解决（PENDING）」期间，退款会被冻结
- * （见 PaymentService.refund 的冻结检查）。Mock 场景下对账单与本地一致（无差异）；
- * 真实渠道对账单下载在 P2 阶段经 PaymentGatewayProvider.downloadBill 补齐
- * （届时构造注入 gateway）。
+ * （见 PaymentService.refund 的冻结检查）。Mock 渠道的对账单与本地一致（无差异）；
+ * WeChat/Alipay 经真实 API 下载（骨架阶段未配置凭据时返回空账单）。
  */
 @Injectable()
 export class ReconciliationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly diffs: ReconciliationRepository,
+    private readonly gateway: PaymentGatewayProvider,
   ) {}
 
   /**
@@ -65,8 +74,8 @@ export class ReconciliationService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // 2. 第三方对账单（Mock：与本地一致的流水）
-    const statement = await this.generateStatement(start, end);
+    // 2. 下载并解析第三方对账单（经 PaymentGatewayProvider 路由到主网关）。
+    const statement = await this.downloadStatement(date);
 
     // 3. 匹配：以 merchantOrderId 为键
     const discrepancies: ReconciliationItem[] = [];
@@ -150,28 +159,47 @@ export class ReconciliationService {
     if (!canTransitionReconciliationDiff(diff.status as ReconciliationDiffStatus, 'RESOLVED')) {
       throw new ValidationError(`差异状态不允许从 ${diff.status} 流转到 RESOLVED`);
     }
-    const ok = await this.diffs.resolve(id);
-    // ok === false 表示并发下已被解决，视为幂等成功。
+    await this.diffs.resolve(id);
+    // resolve 为 updateMany(where status='PENDING')：并发下仅一个命中，未命中视为幂等成功。
     return { id, status: 'RESOLVED' };
   }
 
   /**
-   * 生成对账单（当前为 Mock：与本地 SUCCESS 流水一致，无差异）。
-   * 生产/P2：替换为「下载渠道对账单并解析」（经 PaymentGatewayProvider.downloadBill）。
-   * 声明为 protected 以便测试通过子类注入合成对账单验证差异检测。
+   * 下载渠道对账单并解析为规范化行。
+   * 下载失败（gateway 抛错）原样上抛，交由上层（worker/BullMQ 重试）处理；
+   * 解析失败（格式不符）抛 ValidationError。
+   * 声明为 protected 以便测试注入合成对账单验证差异检测与异常场景。
    */
-  protected async generateStatement(
-    start: Date,
-    end: Date,
-  ): Promise<Array<{ merchantOrderId: string; amount: number; status: string }>> {
-    const local = await this.prisma.payment.findMany({
-      where: { status: 'SUCCESS', createdAt: { gte: start, lte: end } },
-      select: { merchantOrderId: true, amount: true, status: true },
-    });
-    return local.map((p) => ({
-      merchantOrderId: p.merchantOrderId,
-      amount: p.amount,
-      status: p.status,
-    }));
+  protected async downloadStatement(date: Date): Promise<ParsedStatementRow[]> {
+    const raw = await this.gateway.downloadBill(date);
+    return raw.map((row) => this.parseStatementRow(row));
+  }
+
+  /**
+   * 校验并规范化单行渠道对账单。
+   * 格式不符（非对象 / 缺 merchantOrderId / 金额非正整数分 / 状态非字符串）抛 ValidationError。
+   */
+  protected parseStatementRow(row: RawStatementRow): ParsedStatementRow {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      throw new ValidationError('对账单行格式不符：非对象');
+    }
+    if (typeof row.merchantOrderId !== 'string' || row.merchantOrderId.trim() === '') {
+      throw new ValidationError('对账单行格式不符：缺少 merchantOrderId');
+    }
+    if (
+      typeof row.amount !== 'number' ||
+      !Number.isSafeInteger(row.amount) ||
+      row.amount < 0
+    ) {
+      throw new ValidationError(`对账单行金额非法（非正整数分）: ${String(row.merchantOrderId)}`);
+    }
+    if (typeof row.status !== 'string' || row.status.trim() === '') {
+      throw new ValidationError(`对账单行状态非法: ${String(row.merchantOrderId)}`);
+    }
+    return {
+      merchantOrderId: row.merchantOrderId,
+      amount: row.amount,
+      status: row.status,
+    };
   }
 }
