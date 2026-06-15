@@ -3,6 +3,7 @@ import { PaymentRepository } from '../infrastructure/payment.repository';
 import { ReconciliationRepository } from '../infrastructure/reconciliation.repository';
 import { PaymentGatewayProvider } from '../infrastructure/gateway.provider';
 import { OrderRepository } from '../../order/infrastructure/order.repository';
+import { OrderService } from '../../order/application/order.service';
 import {
   PaymentEntity,
   RefundEntity,
@@ -34,6 +35,7 @@ export class PaymentService {
     private readonly orders: OrderRepository,
     private readonly events: EventPublisher,
     private readonly reconciliation: ReconciliationRepository,
+    private readonly orderService?: OrderService,
   ) {}
 
   /**
@@ -244,6 +246,14 @@ export class PaymentService {
       throw new NotFoundError('支付流水不存在');
     }
     return payment;
+  }
+
+  async listByUser(userId: string): Promise<PaymentEntity[]> {
+    if (!this.orderService) {
+      throw new Error('OrderService is required to list payments by user');
+    }
+    const orders = await this.orderService.listByUser(userId);
+    return this.payments.findByOrderIds(orders.map((order) => order.id));
   }
 
   /** 支付状态机流转（校验合法流转后更新）。 */

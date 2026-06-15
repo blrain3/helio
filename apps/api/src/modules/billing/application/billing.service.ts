@@ -37,6 +37,14 @@ export class BillingService {
     return this.bills.findByPlantId(plantId);
   }
 
+  async listByUser(userId: string): Promise<BillEntity[]> {
+    const plants = await this.plants.findByUserId(userId);
+    const groups = await Promise.all(
+      plants.map((plant) => this.bills.findByPlantId(plant.id)),
+    );
+    return groups.flat();
+  }
+
   /**
    * 生成账单：
    * 1. 校验电站存在且归属当前用户；

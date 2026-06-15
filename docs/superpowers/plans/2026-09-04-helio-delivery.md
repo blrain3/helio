@@ -172,35 +172,37 @@ Run: `git add docker-compose.yml apps docs scripts README.md && git commit -m "i
 **Interfaces:**
 - Produces: authenticated `api` list/mutation methods, `useSession`, protected routes and a demo-safe Mock callback action.
 
-- [ ] **Step 1: Write failing session and API adapter tests**
+- [x] **Step 1: Write failing session and API adapter tests**
 
 Test login persistence, one refresh retry after a 401, Authorization header creation, and calling `/plants` rather than a local static array.
 
-- [ ] **Step 2: Run focused tests to verify failure**
+- [x] **Step 2: Run focused tests to verify failure**
 
 Run: `pnpm --filter @helio/web test -- session.spec.ts api.spec.ts`
 
 Expected: failure because session/client modules and real adapters do not yet exist.
 
-- [ ] **Step 3: Implement session lifecycle and protected routing**
+- [x] **Step 3: Implement session lifecycle and protected routing**
 
 Submit credentials to `/api/auth/login` with a stable browser device ID, persist token state, refresh once through `/api/auth/refresh`, clear the session on refresh failure, and redirect unauthenticated users to login.
 
-- [ ] **Step 4: Replace demo data with real typed endpoints**
+- [x] **Step 4: Replace demo data with real typed endpoints**
 
 Use the generated API client for plants/devices/bills/orders/payments/anomalies. Preserve React Query keys and add invalidation after every state-changing mutation.
 
-- [ ] **Step 5: Implement the API workflow seam**
+- [x] **Step 5: Implement the API workflow seam**
 
 Expose only Mock-demo callback orchestration in development/demo configuration; it must create a signed Mock callback, process it through the existing payment service, and allow worker settlement to complete the order without trusting browser-provided status.
 
-- [ ] **Step 6: Verify workflow-focused tests and typecheck**
+- [x] **Step 6: Verify workflow-focused tests and typecheck**
 
 Run: `pnpm --filter @helio/web test`, `pnpm --filter @helio/api test`, `pnpm typecheck`
 
 Expected: tests and types pass.
 
-- [ ] **Step 7: Commit and push**
+Validation note (2026-09-04): `pnpm contracts:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` passed after the final Mock-callback and session-refresh fixes. The optional final security review was intentionally deferred at the user's request. A late P2 review observation about a delayed same-session concurrent-refresh ordering is tracked as deferred work; it did not fail the current test or typecheck gates.
+
+- [x] **Step 7: Commit and push**
 
 Run: `git add apps packages && git commit -m "feat: connect authenticated payment workflow" && git push`
 

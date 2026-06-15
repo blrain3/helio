@@ -29,6 +29,18 @@ export class OrderRepository {
     return this.toEntity(order);
   }
 
+  async findByBillIds(billIds: string[]): Promise<OrderEntity[]> {
+    if (billIds.length === 0) {
+      return [];
+    }
+
+    const orders = await this.prisma.order.findMany({
+      where: { billId: { in: billIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return orders.map((order) => this.toEntity(order));
+  }
+
   /** 更新订单状态（由状态机校验合法性后调用）。 */
   async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity | null> {
     const order = await this.prisma.order.update({

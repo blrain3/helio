@@ -12,14 +12,17 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentService } from '../application/payment.service';
 import { ReconciliationService } from '../application/reconciliation.service';
+import { MockPaymentService } from '../application/mock-payment.service';
 import {
   CreatePaymentDto,
   RefundDto,
   PaymentCallbackDto,
 } from '../application/dto/payment.dto';
 import { Public } from '../../../common/decorators/public.decorator';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { PaymentEntity, RefundEntity } from '../domain/payment.entity';
-import { UnauthorizedError } from '../../auth/domain/errors';
+import { AuthUser } from '../../auth/domain/user.entity';
+import { ForbiddenError, UnauthorizedError } from '../../auth/domain/errors';
 
 /**
  * 支付控制器：支付创建、回调、退款、对账。
@@ -31,7 +34,16 @@ export class PaymentController {
   constructor(
     private readonly payments: PaymentService,
     private readonly reconciliation: ReconciliationService,
+    private readonly mockPayments: MockPaymentService,
   ) {}
+
+  @Get()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '查询当前用户支付流水' })
+  @ApiResponse({ status: 200, description: '支付流水列表' })
+  async list(@CurrentUser() user: AuthUser): Promise<PaymentEntity[]> {
+    return this.payments.listByUser(user.sub);
+  }
 
   @Post()
   @ApiBearerAuth()
@@ -45,12 +57,28 @@ export class PaymentController {
     );
   }
 
+  @Post(':id/mock-complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '开发环境完成 Mock 支付并触发已签名回调' })
+  @ApiResponse({ status: 200, description: 'Mock 回调已处理' })
+  async completeMockPayment(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<{ ack: string }> {
+    return this.mockPayments.complete(id, user);
+  }
+
   @Post('callback')
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '支付回调（验签→落库→幂等→金额校验→状态流转→ACK）' })
   @ApiResponse({ status: 200, description: 'ACK' })
   async callback(@Body() dto: PaymentCallbackDto): Promise<{ ack: string }> {
+    if (dto.provider === 'mock') {
+      throw new ForbiddenError('Mock 支付回调仅可由受控演示流程处理');
+    }
+
     return this.payments.handleCallback({
       provider: dto.provider,
       providerTransactionId: dto.providerTransactionId,

@@ -34,6 +34,14 @@ export class DeviceService {
     return this.devices.findByPlantId(plantId);
   }
 
+  async listByUser(userId: string): Promise<DeviceEntity[]> {
+    const plants = await this.plants.findByUserId(userId);
+    const groups = await Promise.all(
+      plants.map((plant) => this.devices.findByPlantId(plant.id)),
+    );
+    return groups.flat();
+  }
+
   async create(
     serialNo: string,
     plantId: string,
