@@ -1,0 +1,17 @@
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  api:
+    ports: !reset []
+    environment:
+      NODE_ENV: production
+      MOCK_PAYMENT_DEMO_ENABLED: "false"
+      PAYMENT_SHADOW: "false"
+
+  web:
+    ports: !override
+      - "127.0.0.1:8080:80"

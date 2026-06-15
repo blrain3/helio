@@ -24,6 +24,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pwsh -File scripts/verify-compose.ps1
 
   integration:
     name: PostgreSQL & Redis Integration
