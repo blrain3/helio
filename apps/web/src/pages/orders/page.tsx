@@ -114,6 +114,7 @@ export function Component() {
         <OrderForm
           bills={issuedBills}
           isSubmitting={createOrder.isPending}
+          isSubmitDisabled={hasPendingOrderMutation}
           onCancel={() => setCreateOpen(false)}
           onSubmit={create}
         />
@@ -128,7 +129,7 @@ export function Component() {
           <Button type="button" variant="secondary" onClick={() => setClosingOrder(null)} disabled={closeOrder.isPending}>
             取消
           </Button>
-          <Button type="button" onClick={() => void close()} disabled={closeOrder.isPending} className="bg-rose-600 text-white hover:bg-rose-700">
+          <Button type="button" onClick={() => void close()} disabled={hasPendingOrderMutation} className="bg-rose-600 text-white hover:bg-rose-700">
             {closeOrder.isPending ? '关闭中...' : '确认关闭'}
           </Button>
         </div>

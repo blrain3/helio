@@ -183,4 +183,93 @@ describe('OrdersPage', () => {
     });
     await waitFor(() => expect((submitButton as HTMLButtonElement).disabled).toBe(false));
   });
+
+  it('keeps modal mutation controls locked while a different order transition is pending', async () => {
+    vi.spyOn(api, 'listBills').mockResolvedValue([
+      {
+        id: 'bill-1',
+        plantId: 'plant-1',
+        period: '2026-09',
+        amount: 24480,
+        energyKwh: 680,
+        status: 'ISSUED',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+    ]);
+    vi.spyOn(api, 'listOrders').mockResolvedValue([
+      {
+        id: 'order-created',
+        billId: 'bill-1',
+        amount: 24480,
+        status: 'CREATED',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 'order-paid',
+        billId: 'bill-2',
+        amount: 12800,
+        status: 'PAID',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+    ]);
+    let resolveSubmission!: (value: Awaited<ReturnType<typeof api.submitOrderPayment>>) => void;
+    const pendingSubmission = new Promise<Awaited<ReturnType<typeof api.submitOrderPayment>>>((resolve) => {
+      resolveSubmission = resolve;
+    });
+    let resolveCompletion!: (value: Awaited<ReturnType<typeof api.completeOrder>>) => void;
+    const pendingCompletion = new Promise<Awaited<ReturnType<typeof api.completeOrder>>>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    const submitPayment = vi.spyOn(api, 'submitOrderPayment').mockReturnValue(pendingSubmission);
+    const completeOrder = vi.spyOn(api, 'completeOrder').mockReturnValue(pendingCompletion);
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrdersPage />
+      </QueryClientProvider>,
+    );
+
+    const submitButton = await screen.findByRole('button', { name: '提交支付 order-created' });
+    await user.click(screen.getByRole('button', { name: '新建订单' }));
+    await user.selectOptions(screen.getByLabelText('关联账单'), 'bill-1');
+    await user.click(submitButton);
+    await waitFor(() => expect(submitPayment).toHaveBeenCalledWith('order-created'));
+
+    expect((screen.getByRole('button', { name: '创建订单' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '取消' }) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByRole('button', { name: '取消' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    resolveSubmission({
+      id: 'order-created',
+      billId: 'bill-1',
+      amount: 24480,
+      status: 'PENDING_PAYMENT',
+      createdAt: '2026-09-04T00:00:00.000Z',
+    });
+    await waitFor(() => expect((submitButton as HTMLButtonElement).disabled).toBe(false));
+
+    await user.click(screen.getByRole('button', { name: '关闭订单 order-created' }));
+    const completeButton = screen.getByRole('button', { name: '完成订单 order-paid' });
+    await user.click(completeButton);
+    await waitFor(() => expect(completeOrder).toHaveBeenCalledWith('order-paid'));
+
+    expect((screen.getByRole('button', { name: '确认关闭' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '取消' }) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByRole('button', { name: '关闭对话框' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    resolveCompletion({
+      id: 'order-paid',
+      billId: 'bill-2',
+      amount: 12800,
+      status: 'COMPLETED',
+      createdAt: '2026-09-04T00:00:00.000Z',
+    });
+    await waitFor(() => expect((completeButton as HTMLButtonElement).disabled).toBe(false));
+  });
 });
