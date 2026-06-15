@@ -24,6 +24,7 @@ export function Component() {
   const [closingOrder, setClosingOrder] = useState<Order | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
   const issuedBills = (bills.data ?? []).filter((bill) => bill.status === 'ISSUED');
+  const hasPendingOrderMutation = createOrder.isPending || submitPayment.isPending || completeOrder.isPending || closeOrder.isPending;
 
   async function create(values: { billId: string; amount: number }) {
     try {
@@ -76,7 +77,7 @@ export function Component() {
       <PageHeader
         title="订单"
         description="缴费订单及其状态流转。"
-        actions={<Button onClick={() => setCreateOpen(true)} disabled={issuedBills.length === 0}>新建订单</Button>}
+        actions={<Button onClick={() => setCreateOpen(true)} disabled={issuedBills.length === 0 || hasPendingOrderMutation}>新建订单</Button>}
       />
       {notice && <OperationNotice tone={notice.tone}>{notice.message}</OperationNotice>}
       <QueryFeedback
@@ -97,7 +98,7 @@ export function Component() {
             {
               key: 'actions',
               header: '操作',
-              render: (o) => <OrderActions order={o} onSubmit={submit} onComplete={complete} onClose={setClosingOrder} />,
+              render: (o) => <OrderActions order={o} onSubmit={submit} onComplete={complete} onClose={setClosingOrder} disabled={hasPendingOrderMutation} />,
             },
           ]}
           rows={orders.data ?? []}
@@ -141,11 +142,13 @@ function OrderActions({
   onSubmit,
   onComplete,
   onClose,
+  disabled,
 }: {
   order: Order;
   onSubmit: (id: string) => void;
   onComplete: (id: string) => void;
   onClose: (order: Order) => void;
+  disabled: boolean;
 }) {
   if (order.status === 'CREATED') {
     return (
@@ -154,8 +157,9 @@ function OrderActions({
           type="button"
           aria-label={`提交支付 ${order.id}`}
           title="提交支付"
+          disabled={disabled}
           onClick={() => onSubmit(order.id)}
-          className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-yellow-50 hover:text-yellow-700"
+          className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-yellow-50 hover:text-yellow-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <CreditCard className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -163,8 +167,9 @@ function OrderActions({
           type="button"
           aria-label={`关闭订单 ${order.id}`}
           title="关闭订单"
+          disabled={disabled}
           onClick={() => onClose(order)}
-          className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+          className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <XCircle className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -178,8 +183,9 @@ function OrderActions({
         type="button"
         aria-label={`关闭订单 ${order.id}`}
         title="关闭订单"
+        disabled={disabled}
         onClick={() => onClose(order)}
-        className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+        className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <XCircle className="h-4 w-4" aria-hidden="true" />
       </button>
@@ -192,8 +198,9 @@ function OrderActions({
         type="button"
         aria-label={`完成订单 ${order.id}`}
         title="完成订单"
+        disabled={disabled}
         onClick={() => onComplete(order.id)}
-        className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700"
+        className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
       </button>

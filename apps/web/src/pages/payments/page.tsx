@@ -138,20 +138,18 @@ export function Component() {
               key: 'actions',
               header: '操作',
               render: (p) =>
-                p.status === 'PENDING' ? (
+                p.provider === 'mock' && p.status === 'PENDING' ? (
                   <div className="flex items-center gap-1">
-                    {p.provider === 'mock' && (
-                      <button
-                        type="button"
-                        aria-label={`完成模拟支付 ${p.id}`}
-                        title="完成模拟支付"
-                        disabled={completeMockPayment.isPending}
-                        onClick={() => void completeMock(p.id)}
-                        className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      aria-label={`完成模拟支付 ${p.id}`}
+                      title="完成模拟支付"
+                      disabled={completeMockPayment.isPending}
+                      onClick={() => void completeMock(p.id)}
+                      className="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                     <button
                       type="button"
                       aria-label={`关闭支付 ${p.id}`}
@@ -163,7 +161,7 @@ export function Component() {
                       <XCircle className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
-                ) : p.status === 'SUCCESS' && getAvailableRefund(p) > 0 ? (
+                ) : p.provider === 'mock' && p.status === 'SUCCESS' && getAvailableRefund(p) > 0 ? (
                   <button
                     type="button"
                     aria-label={`退款 ${p.id}`}
