@@ -5,6 +5,7 @@ import { handleSettlement } from './handlers/settlement.handler';
 import { handleStatistics } from './handlers/statistics.handler';
 import { handleReconciliation } from './handlers/reconciliation.handler';
 import { handleAnomaly } from './handlers/anomaly.handler';
+import { handlePaymentTimeoutClose } from './handlers/payment-timeout.handler';
 
 // Helio Worker 入口：注册 BullMQ 队列与消费者（与 api 进程解耦）。
 // api 进程负责「入队」，本进程负责「消费」。
@@ -21,6 +22,7 @@ export const settlementQueue = new Queue('settlement', { connection });
 export const statisticsQueue = new Queue('statistics', { connection });
 export const reconciliationQueue = new Queue('reconciliation', { connection });
 export const anomalyQueue = new Queue('anomaly', { connection });
+export const paymentQueue = new Queue('payment', { connection });
 
 /** 处理器路由表：事件名 → 处理器。 */
 type Handler = (payload: Record<string, unknown>, prisma: PrismaClient) => Promise<void>;
@@ -74,6 +76,9 @@ createWorker('reconciliation', {
 createWorker('anomaly', {
   AnomalyDetection: handleAnomaly,
 });
+createWorker('payment', {
+  PaymentTimeoutClose: handlePaymentTimeoutClose,
+});
 
 // eslint-disable-next-line no-console
 console.log('[Helio Worker] queues & workers initialized');
@@ -86,6 +91,7 @@ async function shutdown(): Promise<void> {
     statisticsQueue.close(),
     reconciliationQueue.close(),
     anomalyQueue.close(),
+    paymentQueue.close(),
   ]);
   process.exit(0);
 }
