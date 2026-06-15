@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Sun, Zap, AlertTriangle, Cpu } from 'lucide-react';
 import { api } from '../../lib/api';
-import { fenToYuan, formatDateTime, statusLabel } from '../../lib/format';
+import { fenToYuan, formatDateTime } from '../../lib/format';
 import { PageHeader, StatCard, DataTable, StatusBadge, LoadingState } from '../../components/ui';
 
 export function Component() {

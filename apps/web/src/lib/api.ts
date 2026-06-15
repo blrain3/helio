@@ -6,7 +6,20 @@ import type {
   Payment,
   Anomaly,
 } from './types';
-import { PLANTS, DEVICES, BILLS, ORDERS, PAYMENTS, ANOMALIES } from './data';
+import { DEVICES, BILLS, ORDERS, PAYMENTS, ANOMALIES } from './data';
+import { createHelioClient } from '@helio/api-client';
+
+export interface ApiTransport {
+  request<T>(path: string): Promise<T>;
+}
+
+interface PlantResponse {
+  id: string;
+  name: string;
+  capacity: number;
+  location: string | null;
+  createdAt: string;
+}
 
 /**
  * 数据访问层（供 TanStack Query 使用）。
@@ -23,11 +36,29 @@ function delay<T>(data: T, ms = 250): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
 
-export const api = {
-  listPlants: (): Promise<Plant[]> => delay(PLANTS),
+export function createApi(client: ApiTransport) {
+  return {
+    listPlants: async (): Promise<Plant[]> => {
+      const plants = await client.request<PlantResponse[]>('/plants');
+      return plants.map((plant) => ({
+        id: plant.id,
+        name: plant.name,
+        capacityKw: plant.capacity,
+        location: plant.location ?? '未填写',
+        status: 'UNKNOWN',
+        createdAt: plant.createdAt,
+      }));
+    },
   listDevices: (): Promise<Device[]> => delay(DEVICES),
   listBills: (): Promise<Bill[]> => delay(BILLS),
   listOrders: (): Promise<Order[]> => delay(ORDERS),
   listPayments: (): Promise<Payment[]> => delay(PAYMENTS),
   listAnomalies: (): Promise<Anomaly[]> => delay(ANOMALIES),
+  };
 };
+
+const client = createHelioClient({
+  baseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api',
+});
+
+export const api = createApi(client);

@@ -3,7 +3,6 @@ import { PaymentGatewayProvider } from './gateway.provider';
 import { MockGateway } from './mock.gateway';
 import { WeChatGateway } from './wechat.gateway';
 import { AlipayGateway } from './alipay.gateway';
-import { PaymentGateway } from '../domain/payment.entity';
 
 /** 构造一个最小 ConfigService 替身。 */
 function makeConfig(values: Record<string, string> = {}) {

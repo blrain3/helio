@@ -32,7 +32,7 @@ export class MockGateway implements PaymentGateway {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async createPayment(req: CreatePaymentRequest): Promise<CreatePaymentResult> {
+  async createPayment(_req: CreatePaymentRequest): Promise<CreatePaymentResult> {
     // 模拟渠道交易号：MOCK + 时间戳 + 随机段。
     const providerTransactionId = `MOCK${Date.now()}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     return {

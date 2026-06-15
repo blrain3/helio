@@ -59,23 +59,23 @@
 **Interfaces:**
 - Produces: a single source of truth for all following milestone acceptance gates.
 
-- [ ] **Step 1: Verify the existing ignore rule excludes `docs/`**
+- [x] **Step 1: Verify the existing ignore rule excludes `docs/`**
 
 Run: `git check-ignore -v docs/DEVELOPMENT.md`
 
 Expected: `.gitignore` reports the `docs/` rule.
 
-- [ ] **Step 2: Remove the `docs/` ignore rule and add design/plan documents**
+- [x] **Step 2: Remove the `docs/` ignore rule and add design/plan documents**
 
 The design must define API-client ownership, internal worker signing, Mock payment scope and the testing/deployment boundary. The plan must list milestones 1–7 in the requested order and include command-level acceptance gates.
 
-- [ ] **Step 3: Verify the plan is tracked and internally consistent**
+- [x] **Step 3: Verify the plan is tracked and internally consistent**
 
 Run: `git diff --check` and `rg -n "TODO|TBD|implement later" docs/superpowers`
 
 Expected: no whitespace errors and no unfinished plan markers.
 
-- [ ] **Step 4: Commit and push the plan**
+- [x] **Step 4: Commit and push the plan**
 
 Run: `git add .gitignore docs/superpowers && git commit -m "docs: add delivery completion plan" && git push -u origin codex/helio-delivery`
 
@@ -90,35 +90,35 @@ Run: `git add .gitignore docs/superpowers && git commit -m "docs: add delivery c
 - Produces: `createHelioClient(options)` and generated `paths` types exported by `@helio/api-client`.
 - Consumes: API Swagger configuration and `VITE_API_BASE_URL`.
 
-- [ ] **Step 1: Write failing API-client tests**
+- [x] **Step 1: Write failing API-client tests**
 
 Add a Vitest test that calls a stubbed fetch through `createHelioClient` and asserts bearer authorization, JSON encoding and normalized errors. Add a Web adapter test that verifies a typed plant-list call replaces the demo array.
 
-- [ ] **Step 2: Run focused tests to verify failure**
+- [x] **Step 2: Run focused tests to verify failure**
 
 Run: `pnpm --filter @helio/api-client test` and `pnpm --filter @helio/web test -- api.spec.ts`
 
 Expected: failure because the client module and test scripts do not exist.
 
-- [ ] **Step 3: Implement contract export/generation and transport**
+- [x] **Step 3: Implement contract export/generation and transport**
 
 Export the OpenAPI document without binding a listening port. Generate `schema.d.ts` from the document in a reproducible script. Make the API-client package build from `src/index.ts`, provide lint/typecheck/test scripts, and add root scripts that invoke it.
 
-- [ ] **Step 4: Add flat ESLint configuration and correct Turbo task dependencies**
+- [x] **Step 4: Add flat ESLint configuration and correct Turbo task dependencies**
 
 Use ESLint 9 flat configuration for TypeScript/React files. Make `lint`, `typecheck`, `test` and `build` tasks depend on the appropriate contract build without treating an absent generated source as success.
 
-- [ ] **Step 5: Update CI quality stages**
+- [x] **Step 5: Update CI quality stages**
 
 Make CI run contract generation/verification, root lint/typecheck/test/build, and retain artifacts required by later E2E stages.
 
-- [ ] **Step 6: Verify the full root quality gate**
+- [x] **Step 6: Verify the full root quality gate**
 
 Run: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`
 
 Expected: every command exits 0 and no workspace package is skipped due to missing scripts.
 
-- [ ] **Step 7: Commit and push**
+- [x] **Step 7: Commit and push**
 
 Run: `git add package.json turbo.json eslint.config.mjs apps packages .github && git commit -m "build: repair workspace quality gate" && git push`
 
