@@ -80,6 +80,23 @@ createWorker('payment', {
   PaymentTimeoutClose: handlePaymentTimeoutClose,
 });
 
+// 注册每日对账定时任务（BullMQ repeatable：每日 01:30 触发，时区随服务器本地）。
+// jobId 固定，重复注册由 BullMQ 幂等去重；失败任务经 attempts/backoff 重试。
+void reconciliationQueue
+  .add(
+    'DailyReconciliation',
+    { name: 'DailyReconciliation', payload: {} },
+    { jobId: 'reconcile-daily', repeat: { pattern: '30 1 * * *' } },
+  )
+  .then(() => {
+    // eslint-disable-next-line no-console
+    console.log('[Helio Worker] 日对账定时任务已注册（每日 01:30）');
+  })
+  .catch((err: Error) => {
+    // eslint-disable-next-line no-console
+    console.error('[Helio Worker] 日对账定时任务注册失败', err.message);
+  });
+
 // eslint-disable-next-line no-console
 console.log('[Helio Worker] queues & workers initialized');
 
