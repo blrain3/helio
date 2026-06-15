@@ -41,9 +41,9 @@ export const ORDERS: Order[] = [
 ];
 
 export const PAYMENTS: Payment[] = [
-  { id: 'pay-001', orderId: 'ord-001', provider: 'wechat', providerTransactionId: 'WX4200001', amount: 1285000, status: 'SUCCESS', createdAt: '2026-09-01T03:05:00Z' },
-  { id: 'pay-002', orderId: 'ord-002', provider: 'alipay', providerTransactionId: 'ALI20260901', amount: 305200, status: 'PENDING', createdAt: '2026-09-01T03:05:00Z' },
-  { id: 'pay-003', orderId: 'ord-001', provider: 'wechat', providerTransactionId: 'WX4200002', amount: 50000, status: 'REFUNDED', createdAt: '2026-09-02T09:00:00Z' },
+  { id: 'pay-001', orderId: 'ord-001', provider: 'wechat', providerTransactionId: 'WX4200001', amount: 1285000, refundedAmount: 0, status: 'SUCCESS', createdAt: '2026-09-01T03:05:00Z' },
+  { id: 'pay-002', orderId: 'ord-002', provider: 'alipay', providerTransactionId: 'ALI20260901', amount: 305200, refundedAmount: 0, status: 'PENDING', createdAt: '2026-09-01T03:05:00Z' },
+  { id: 'pay-003', orderId: 'ord-001', provider: 'wechat', providerTransactionId: 'WX4200002', amount: 50000, refundedAmount: 50000, status: 'REFUNDED', createdAt: '2026-09-02T09:00:00Z' },
 ];
 
 export const ANOMALIES: Anomaly[] = [

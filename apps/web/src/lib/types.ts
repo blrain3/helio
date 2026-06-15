@@ -77,6 +77,8 @@ export interface Payment {
   providerTransactionId: string | null;
   /** 金额（分） */
   amount: number;
+  /** 已退款金额（分） */
+  refundedAmount: number;
   status: PaymentStatus;
   createdAt: string;
 }
@@ -93,4 +95,10 @@ export interface Anomaly {
   severity: 'LOW' | 'MEDIUM' | 'HIGH';
   status: AnomalyStatus;
   createdAt: string;
+}
+
+export interface DailyEnergyPoint {
+  day: string;
+  totalKwh: number;
+  recordCount: number;
 }
