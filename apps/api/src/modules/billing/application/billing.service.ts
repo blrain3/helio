@@ -9,6 +9,7 @@ import {
   ForbiddenError,
   ValidationError,
 } from '../../auth/domain/errors';
+import { AuthUser } from '../../auth/domain/user.entity';
 
 /**
  * 计费应用服务：账单生成、查询、状态流转。
@@ -25,7 +26,13 @@ export class BillingService {
     private readonly calculator: AmountCalculator,
   ) {}
 
-  async findById(id: string): Promise<BillEntity> {
+  async findById(id: string, user: AuthUser): Promise<BillEntity> {
+    const bill = await this.getById(id);
+    await this.assertOwnable(bill.plantId, user.sub);
+    return bill;
+  }
+
+  private async getById(id: string): Promise<BillEntity> {
     const bill = await this.bills.findById(id);
     if (!bill) {
       throw new NotFoundError('账单不存在');
@@ -33,7 +40,8 @@ export class BillingService {
     return bill;
   }
 
-  async listByPlant(plantId: string): Promise<BillEntity[]> {
+  async listByPlant(plantId: string, user: AuthUser): Promise<BillEntity[]> {
+    await this.assertOwnable(plantId, user.sub);
     return this.bills.findByPlantId(plantId);
   }
 
@@ -84,7 +92,7 @@ export class BillingService {
 
   /** 标记账单为已发出（ISSUED）。 */
   async issue(id: string, userId: string): Promise<BillEntity> {
-    const bill = await this.findById(id);
+    const bill = await this.getById(id);
     await this.assertOwnable(bill.plantId, userId);
     if (bill.status !== 'PENDING') {
       throw new ValidationError('仅 PENDING 状态的账单可发出');
@@ -98,7 +106,7 @@ export class BillingService {
 
   /** 标记账单为已支付（PAID），由订单支付成功后触发。 */
   async markPaid(id: string): Promise<BillEntity> {
-    const bill = await this.findById(id);
+    const bill = await this.getById(id);
     if (bill.status !== 'ISSUED' && bill.status !== 'PENDING') {
       throw new ValidationError('账单状态不允许标记为已支付');
     }

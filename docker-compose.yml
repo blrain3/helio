@@ -48,7 +48,7 @@ services:
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       PAYMENT_SHADOW: ${PAYMENT_SHADOW:-false}
       PAYMENT_TIMEOUT_MS: ${PAYMENT_TIMEOUT_MS:-1800000}
-      RECONCILE_INTERNAL_TOKEN: ${RECONCILE_INTERNAL_TOKEN:-helio-local-internal-token}
+      INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_SECRET:-helio-local-internal-request-secret}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}
     ports:
@@ -77,8 +77,8 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      API_BASE_URL: http://api:3000
-      RECONCILE_INTERNAL_TOKEN: ${RECONCILE_INTERNAL_TOKEN:-helio-local-internal-token}
+      API_BASE_URL: http://api:3000/api
+      INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_SECRET:-helio-local-internal-request-secret}
     depends_on:
       postgres:
         condition: service_healthy

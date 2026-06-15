@@ -12,6 +12,8 @@ import {
   UnauthorizedError,
 } from '../../auth/domain/errors';
 
+const owner = { sub: 'user-1', email: 'owner@example.com', role: 'USER' as const };
+
 describe('Payment state machine', () => {
   it('合法流转', () => {
     expect(canTransitionPayment('CREATED', 'PENDING')).toBe(true);
@@ -110,12 +112,13 @@ describe('PaymentService.handleCallback（七步回调链路）', () => {
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
     reconciliation: { findPendingByPaymentId: vi.fn() },
+    orderService: { assertOwnedByUser: vi.fn() },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never, deps.orderService as never);
   });
 
   it('验签失败抛 UnauthorizedError', async () => {
@@ -251,35 +254,36 @@ describe('PaymentService.refund（退款金额校验）', () => {
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
     reconciliation: { findPendingByPaymentId: vi.fn() },
+    orderService: { assertOwnedByUser: vi.fn() },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never, deps.orderService as never);
   });
 
   it('非 SUCCESS 状态不可退款', async () => {
     deps.payments.findById.mockResolvedValue({ ...payment, status: 'PENDING' });
-    await expect(service.refund('p-1', 1000, 'RFN1')).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.refund('p-1', 1000, 'RFN1', owner)).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('存在未解决的对账差异时退款被冻结', async () => {
     deps.payments.findById.mockResolvedValue(payment);
     deps.reconciliation.findPendingByPaymentId.mockResolvedValueOnce({ id: 'd-1' });
-    await expect(service.refund('p-1', 1000, 'RFN-FROZEN')).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.refund('p-1', 1000, 'RFN-FROZEN', owner)).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('退款金额超过可退金额被拒绝', async () => {
     deps.payments.findById.mockResolvedValue({ ...payment, refundedAmount: 8000 });
-    await expect(service.refund('p-1', 3000, 'RFN1')).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.refund('p-1', 3000, 'RFN1', owner)).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('部分退款：创建退款单并累计退款金额，支付状态保持 SUCCESS', async () => {
     deps.payments.findById.mockResolvedValue(payment);
     deps.payments.createRefund.mockResolvedValue({ id: 'r-1', paymentId: 'p-1', refundNo: 'RFN1', providerRefundId: null, amount: 3000, status: 'CREATED', createdAt: new Date(), updatedAt: new Date() });
 
-    const refund = await service.refund('p-1', 3000, 'RFN1');
+    const refund = await service.refund('p-1', 3000, 'RFN1', owner);
 
     expect(refund.amount).toBe(3000);
     expect(deps.payments.createRefund).toHaveBeenCalled();
@@ -293,7 +297,7 @@ describe('PaymentService.refund（退款金额校验）', () => {
     deps.payments.createRefund.mockResolvedValue({ id: 'r-1', paymentId: 'p-1', refundNo: 'RFN2', providerRefundId: null, amount: 10000, status: 'CREATED', createdAt: new Date(), updatedAt: new Date() });
     deps.payments.updateStatus.mockResolvedValue({ ...payment, status: 'REFUNDED' });
 
-    await service.refund('p-1', 10000, 'RFN2');
+    await service.refund('p-1', 10000, 'RFN2', owner);
 
     expect(deps.payments.updateStatus).toHaveBeenCalledWith('p-1', 'REFUNDED');
   });
@@ -325,28 +329,29 @@ describe('PaymentService.createPayment（下单）', () => {
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
     reconciliation: { findPendingByPaymentId: vi.fn() },
+    orderService: { assertOwnedByUser: vi.fn() },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never, deps.orderService as never);
   });
 
   it('订单不存在抛 NotFoundError', async () => {
     deps.orders.findById.mockResolvedValue(null);
-    await expect(service.createPayment('o-1', 'mock', '')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.createPayment('o-1', 'mock', '', owner)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('订单未处于待支付状态抛 ValidationError', async () => {
     deps.orders.findById.mockResolvedValue({ ...order, status: 'CREATED' });
-    await expect(service.createPayment('o-1', 'mock', '')).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.createPayment('o-1', 'mock', '', owner)).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('已存在支付流水抛 ConflictError', async () => {
     deps.orders.findById.mockResolvedValue(order);
     deps.payments.findByMerchantOrderId.mockResolvedValue({ id: 'p-1' });
-    await expect(service.createPayment('o-1', 'mock', '')).rejects.toBeInstanceOf(ConflictError);
+    await expect(service.createPayment('o-1', 'mock', '', owner)).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('成功创建支付流水（初始 PENDING）', async () => {
@@ -358,7 +363,7 @@ describe('PaymentService.createPayment（下单）', () => {
       createdAt: new Date(), updatedAt: new Date(),
     });
 
-    const result = await service.createPayment('o-1', 'mock', 'https://x/cb');
+    const result = await service.createPayment('o-1', 'mock', 'https://x/cb', owner);
 
     expect(result.status).toBe('PENDING');
     expect(deps.payments.create).toHaveBeenCalledWith(
@@ -375,7 +380,7 @@ describe('PaymentService.createPayment（下单）', () => {
       createdAt: new Date(), updatedAt: new Date(),
     });
 
-    await service.createPayment('o-1', 'mock', 'https://x/cb');
+    await service.createPayment('o-1', 'mock', 'https://x/cb', owner);
 
     expect(deps.events.publish).toHaveBeenCalledWith(
       'payment',
@@ -398,7 +403,7 @@ describe('PaymentService.createPayment（下单）', () => {
         createdAt: new Date(), updatedAt: new Date(),
       });
 
-      await service.createPayment('o-1', 'mock', 'https://x/cb');
+      await service.createPayment('o-1', 'mock', 'https://x/cb', owner);
 
       expect(deps.events.publish).toHaveBeenCalledWith(
         'payment',

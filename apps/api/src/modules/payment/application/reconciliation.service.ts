@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { ReconciliationRepository } from '../infrastructure/reconciliation.repository';
 import { PaymentGatewayProvider } from '../infrastructure/gateway.provider';
-import { ValidationError, NotFoundError } from '../../auth/domain/errors';
+import { ValidationError, NotFoundError, ForbiddenError } from '../../auth/domain/errors';
+import { PaymentRepository } from '../infrastructure/payment.repository';
+import { OrderService } from '../../order/application/order.service';
+import { AuthUser } from '../../auth/domain/user.entity';
 import {
   RawStatementRow,
   ReconciliationDiffStatus,
@@ -49,6 +52,8 @@ export class ReconciliationService {
     private readonly prisma: PrismaService,
     private readonly diffs: ReconciliationRepository,
     private readonly gateway: PaymentGatewayProvider,
+    private readonly payments?: PaymentRepository,
+    private readonly orders?: OrderService,
   ) {}
 
   /**
@@ -148,11 +153,15 @@ export class ReconciliationService {
    * 解决差异：PENDING → RESOLVED，解锁关联支付的退款冻结。
    * 幂等：已 RESOLVED 的差异直接返回，不重复流转。
    */
-  async resolveDiff(id: string): Promise<{ id: string; status: ReconciliationDiffStatus }> {
+  async resolveDiff(
+    id: string,
+    user: AuthUser,
+  ): Promise<{ id: string; status: ReconciliationDiffStatus }> {
     const diff = await this.diffs.findById(id);
     if (!diff) {
       throw new NotFoundError('对账差异不存在');
     }
+    await this.assertDiffAccess(diff.paymentId, user);
     if (diff.status === 'RESOLVED') {
       return { id: diff.id, status: 'RESOLVED' }; // 幂等
     }
@@ -162,6 +171,23 @@ export class ReconciliationService {
     await this.diffs.resolve(id);
     // resolve 为 updateMany(where status='PENDING')：并发下仅一个命中，未命中视为幂等成功。
     return { id, status: 'RESOLVED' };
+  }
+
+  private async assertDiffAccess(paymentId: string | null, user: AuthUser): Promise<void> {
+    if (!paymentId) {
+      if (user.role !== 'OPERATOR' && user.role !== 'ADMIN') {
+        throw new ForbiddenError('无权处理无归属的对账差异');
+      }
+      return;
+    }
+    if (!this.payments || !this.orders) {
+      throw new Error('Payment and order services are required for reconciliation authorization');
+    }
+    const payment = await this.payments.findById(paymentId);
+    if (!payment) {
+      throw new NotFoundError('支付流水不存在');
+    }
+    await this.orders.assertOwnedByUser(payment.orderId, user, true);
   }
 
   /**

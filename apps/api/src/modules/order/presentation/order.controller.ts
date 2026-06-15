@@ -12,6 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { OrderService } from '../application/order.service';
 import { CreateOrderDto } from '../application/dto/order.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { Roles } from '../../../common/decorators/roles.decorator';
 import { AuthUser } from '../../auth/domain/user.entity';
 import { OrderEntity } from '../domain/order.entity';
 
@@ -32,8 +33,11 @@ export class OrderController {
   @Get(':id')
   @ApiOperation({ summary: '按 id 查询订单' })
   @ApiResponse({ status: 200, description: '订单信息' })
-  async findById(@Param('id') id: string): Promise<OrderEntity> {
-    return this.orders.findById(id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<OrderEntity> {
+    return this.orders.findById(id, user);
   }
 
   @Post()
@@ -43,7 +47,7 @@ export class OrderController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateOrderDto,
   ): Promise<OrderEntity> {
-    return this.orders.create(dto.billId, dto.amount, user.sub);
+    return this.orders.create(dto.billId, dto.amount, user);
   }
 
   @Patch(':id/submit-payment')
@@ -53,15 +57,19 @@ export class OrderController {
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,
   ): Promise<OrderEntity> {
-    return this.orders.submitPayment(id, user.sub);
+    return this.orders.submitPayment(id, user);
   }
 
   @Patch(':id/confirm-paid')
   @HttpCode(HttpStatus.OK)
+  @Roles('OPERATOR', 'ADMIN')
   @ApiOperation({ summary: '确认支付成功（PENDING_PAYMENT → PAID，联动账单）' })
   @ApiResponse({ status: 200, description: '支付成功' })
-  async confirmPaid(@Param('id') id: string): Promise<OrderEntity> {
-    return this.orders.confirmPaid(id);
+  async confirmPaid(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<OrderEntity> {
+    return this.orders.confirmPaid(id, user);
   }
 
   @Patch(':id/complete')
@@ -71,7 +79,7 @@ export class OrderController {
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,
   ): Promise<OrderEntity> {
-    return this.orders.complete(id, user.sub);
+    return this.orders.complete(id, user);
   }
 
   @Patch(':id/close')
@@ -81,6 +89,6 @@ export class OrderController {
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,
   ): Promise<OrderEntity> {
-    return this.orders.close(id, user.sub);
+    return this.orders.close(id, user);
   }
 }

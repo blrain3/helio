@@ -80,12 +80,11 @@ describe('MockPaymentService', () => {
       status: 'SUCCESS',
     });
     expect(gateway.verifyCallback(callback)).toBe(true);
-    expect(orders.assertOwnedByUser).toHaveBeenCalledWith('order-1', 'user-1');
+    expect(payments.findById).toHaveBeenCalledWith('payment-1', owner);
   });
 
   it('rejects a non-owner before constructing or processing a Mock callback', async () => {
-    payments.findById.mockResolvedValue(payment);
-    orders.assertOwnedByUser.mockRejectedValue(new ForbiddenError('无权操作该订单'));
+    payments.findById.mockRejectedValue(new ForbiddenError('无权操作该订单'));
     const createSuccessCallback = vi.spyOn(gateway, 'createSuccessCallback');
 
     await expect(
@@ -97,7 +96,7 @@ describe('MockPaymentService', () => {
       )('payment-1', { ...owner, sub: 'other-user' }),
     ).rejects.toBeInstanceOf(ForbiddenError);
 
-    expect(orders.assertOwnedByUser).toHaveBeenCalledWith('order-1', 'other-user');
+    expect(payments.findById).toHaveBeenCalledWith('payment-1', { ...owner, sub: 'other-user' });
     expect(createSuccessCallback).not.toHaveBeenCalled();
     expect(payments.handleCallback).not.toHaveBeenCalled();
   });
