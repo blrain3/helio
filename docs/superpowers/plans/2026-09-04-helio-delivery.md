@@ -217,31 +217,33 @@ Run: `git add apps packages && git commit -m "feat: connect authenticated paymen
 - Consumes: Task 3 typed API methods and session state.
 - Produces: accessible mutation dialogs, errors, empty/loading states and dashboard trend visualization.
 
-- [ ] **Step 1: Write failing component tests**
+- [x] **Step 1: Write failing component tests**
 
 Test that a new-plant form submits a typed mutation, a failed query displays retry affordance, and chart data renders a labelled SVG/canvas summary with no data fallback.
 
-- [ ] **Step 2: Run focused tests to verify failure**
+- [x] **Step 2: Run focused tests to verify failure**
 
 Run: `pnpm --filter @helio/web test -- plants.page.spec.tsx feedback.spec.tsx`
 
 Expected: failure because interaction components and behavior tests are absent.
 
-- [ ] **Step 3: Build mutation forms and row actions**
+- [x] **Step 3: Build mutation forms and row actions**
 
 Add create/edit/delete plant/device dialogs; generate/issue bills; create/submit/Mock-complete orders; close/refund payments; resolve anomaly and reconciliation status where APIs permit. Disable actions while mutations run and invalidate exact React Query keys on success.
 
-- [ ] **Step 4: Add chart and feedback presentation**
+- [x] **Step 4: Add chart and feedback presentation**
 
 Render daily energy data in a responsive chart, add loading/empty/error/retry panels on every data page, and create user-visible success/error notifications.
 
-- [ ] **Step 5: Verify responsive interaction behavior**
+- [x] **Step 5: Verify responsive interaction behavior**
 
 Run: `pnpm --filter @helio/web test`, `pnpm --filter @helio/web build`, and browser screenshots at desktop/mobile sizes.
 
 Expected: tests/build pass and controls remain visible without horizontal page overflow.
 
-- [ ] **Step 6: Commit and push**
+Validation note (2026-09-04): `pnpm --filter @helio/web test` passed 15 files / 44 tests; Web lint, typecheck and production build passed. Desktop and mobile browser snapshots verified the responsive shell, drawer and no-overflow condition against the local frontend error state. Root `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` also passed.
+
+- [x] **Step 6: Commit and push**
 
 Run: `git add apps/web && git commit -m "feat: complete operations console interactions" && git push`
 
