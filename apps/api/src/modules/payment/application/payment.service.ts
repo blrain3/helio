@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentRepository } from '../infrastructure/payment.repository';
+import { ReconciliationRepository } from '../infrastructure/reconciliation.repository';
 import { PaymentGatewayProvider } from '../infrastructure/gateway.provider';
 import { OrderRepository } from '../../order/infrastructure/order.repository';
 import {
@@ -32,6 +33,7 @@ export class PaymentService {
     private readonly gateway: PaymentGatewayProvider,
     private readonly orders: OrderRepository,
     private readonly events: EventPublisher,
+    private readonly reconciliation: ReconciliationRepository,
   ) {}
 
   /**
@@ -189,9 +191,10 @@ export class PaymentService {
   /**
    * 发起退款：
    * 1. 校验支付已 SUCCESS；
-   * 2. 校验退款金额 ≤ 可退金额（amount - refundedAmount）；
-   * 3. 调用网关 refundPayment；
-   * 4. 创建退款单（CREATED）并累计退款金额。
+   * 2. 冻结检查：存在未解决的对账差异则拒绝（闭环）；
+   * 3. 校验退款金额 ≤ 可退金额（amount - refundedAmount）；
+   * 4. 调用网关 refundPayment；
+   * 5. 创建退款单（CREATED）并累计退款金额。
    */
   async refund(paymentId: string, amount: number, refundNo: string): Promise<RefundEntity> {
     const payment = await this.payments.findById(paymentId);
@@ -200,6 +203,11 @@ export class PaymentService {
     }
     if (payment.status !== 'SUCCESS') {
       throw new ValidationError('仅支付成功的流水可退款');
+    }
+    // 冻结检查（对账闭环）：存在未解决的对账差异时拒绝退款，差异解决后自动解锁。
+    const pendingDiff = await this.reconciliation.findPendingByPaymentId(paymentId);
+    if (pendingDiff) {
+      throw new ValidationError('该支付存在未解决的对账差异，退款已冻结');
     }
     const available = payment.amount - payment.refundedAmount;
     if (amount <= 0 || amount > available) {

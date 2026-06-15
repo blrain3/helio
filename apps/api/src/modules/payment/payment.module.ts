@@ -3,6 +3,7 @@ import { PaymentController } from './presentation/payment.controller';
 import { PaymentService } from './application/payment.service';
 import { ReconciliationService } from './application/reconciliation.service';
 import { PaymentRepository } from './infrastructure/payment.repository';
+import { ReconciliationRepository } from './infrastructure/reconciliation.repository';
 import { MockGateway } from './infrastructure/mock.gateway';
 import { WeChatGateway } from './infrastructure/wechat.gateway';
 import { AlipayGateway } from './infrastructure/alipay.gateway';
@@ -23,11 +24,12 @@ import { OrderModule } from '../order/order.module';
     PaymentService,
     ReconciliationService,
     PaymentRepository,
+    ReconciliationRepository,
     MockGateway,
     WeChatGateway,
     AlipayGateway,
     PaymentGatewayProvider,
   ],
-  exports: [PaymentService, PaymentRepository, ReconciliationService, PaymentGatewayProvider],
+  exports: [PaymentService, PaymentRepository, ReconciliationService, ReconciliationRepository, PaymentGatewayProvider],
 })
 export class PaymentModule {}
