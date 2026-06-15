@@ -69,3 +69,49 @@ curl -fsS https://<web-host>/
 ```
 
 只有四个端点均可访问后，才将实际 URL 写入 README 和 `docs/SHOWCASE.md`。
+
+## VPS + Nginx
+
+生产部署使用 `docker-compose.production.yml` 覆盖本地 Compose。该覆盖文件不发布 PostgreSQL、Redis 或 API 端口；Web 仅监听 VPS 的 `127.0.0.1:8080`，由宿主机 Nginx 提供唯一的公网 HTTPS 入口。需要 Docker Compose v2.24 或更高版本以支持 `!reset` 和 `!override` 端口覆盖。
+
+在 VPS 的仓库目录执行：
+
+```bash
+git fetch origin codex/helio-delivery
+git checkout -B codex/helio-delivery origin/codex/helio-delivery
+cp .env.production.example .env.production
+chmod 600 .env.production
+```
+
+编辑 `.env.production`，用 `openssl rand -hex 32` 为 `POSTGRES_PASSWORD`、`JWT_ACCESS_SECRET`、`JWT_REFRESH_SECRET` 和 `INTERNAL_REQUEST_SECRET` 生成互不复用的值，并把两个 URL 改为实际 HTTPS 域名。示例文件中的值不能用于生产环境。
+
+启动并仅在 VPS 本机验证：
+
+```bash
+sudo docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up --build -d
+sudo docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml ps
+curl -fsS http://127.0.0.1:8080/api/health/ready
+```
+
+安装 Nginx 与 Certbot，将 `deploy/nginx.conf.example` 的域名替换为实际域名后安装为 `/etc/nginx/sites-available/helio`，禁用 Nginx 默认站点并启用 Helio 站点：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+sudo install -m 644 deploy/nginx.conf.example /etc/nginx/sites-available/helio
+sudo sed -i 's/helio.example.com/<domain>/g' /etc/nginx/sites-available/helio
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/helio /etc/nginx/sites-enabled/helio
+sudo nginx -t
+sudo systemctl enable --now nginx
+sudo certbot --nginx --redirect --non-interactive --agree-tos --email <ops-email> -d <domain>
+```
+
+证书签发后，把 `.env.production` 中的 `FRONTEND_URL` 与 `WEBHOOK_BASE_URL` 改为 `https://<domain>`，然后重新执行生产 Compose 的 `up -d`。验证：
+
+```bash
+curl -fsS https://<domain>/api/health/ready
+curl -fsS https://<domain>/api/docs
+```
+
+Cloudflare DNS 的 A 记录需要先指向 VPS。签发完成后，将 Cloudflare SSL/TLS 加密模式设为 `Full (strict)`。若 HTTP-01 验证被 Cloudflare 规则拦截，临时将该记录切为 DNS only，完成签发后再恢复代理。防火墙与云安全组仅放行 SSH、HTTP 和 HTTPS。

@@ -18,6 +18,10 @@ function requireSession({ request }: LoaderFunctionArgs) {
  */
 export const router = createBrowserRouter([
   {
+    path: '/client-demo',
+    lazy: () => import('./pages/client-demo/page'),
+  },
+  {
     path: '/auth/login',
     lazy: () => import('./pages/auth/login'),
   },
