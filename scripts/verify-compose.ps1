@@ -53,6 +53,11 @@ foreach ($serviceName in @('postgres', 'redis', 'api')) {
   Assert-Condition (-not $production.services[$serviceName].ContainsKey('ports')) "production '$serviceName' must not publish a host port"
 }
 
+foreach ($serviceName in @('postgres', 'redis', 'api', 'worker', 'web')) {
+  $productionService = $production.services[$serviceName]
+  Assert-Condition ($productionService.ContainsKey('restart') -and $productionService.restart -eq 'unless-stopped') "production '$serviceName' must restart after a VPS reboot"
+}
+
 $productionPostgres = $production.services.postgres.environment
 $productionApi = $production.services.api.environment
 $productionWorker = $production.services.worker.environment

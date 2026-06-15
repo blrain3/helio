@@ -1,8 +1,10 @@
 services:
   postgres:
+    restart: unless-stopped
     ports: !reset []
 
   redis:
+    restart: unless-stopped
     ports: !reset []
 
   api:
