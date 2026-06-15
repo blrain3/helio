@@ -181,9 +181,9 @@ importers:
 
   apps/worker:
     dependencies:
-      '@helio/api':
-        specifier: workspace:*
-        version: link:../api
+      '@prisma/client':
+        specifier: ^6.1.0
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       bullmq:
         specifier: ^5.34.0
         version: 5.81.4

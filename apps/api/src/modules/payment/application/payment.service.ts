@@ -10,6 +10,7 @@ import {
   PaymentStatus,
   canTransitionPayment,
 } from '../domain/payment.entity';
+import { EventPublisher, QUEUES } from '../../../infrastructure/queue/event-publisher';
 import {
   NotFoundError,
   ConflictError,
@@ -30,6 +31,7 @@ export class PaymentService {
     private readonly payments: PaymentRepository,
     private readonly gateway: MockGateway,
     private readonly orders: OrderRepository,
+    private readonly events: EventPublisher,
   ) {}
 
   /**
@@ -117,11 +119,24 @@ export class PaymentService {
       const payment = await this.transitionPayment(existing.id, 'SUCCESS');
       // 联动订单：支付成功 → 订单确认支付（→PAID，并联动账单）。
       await this.orders.updateStatus(payment.orderId, 'PAID');
+
+      // 7. 发布领域事件（M5a：异步结算 / 统计更新）。
+      //    以 orderId 作为幂等键，重复回调不会重复入队执行。
+      await this.events.publish(QUEUES.SETTLEMENT, {
+        name: 'PaymentSucceeded',
+        payload: {
+          paymentId: payment.id,
+          orderId: payment.orderId,
+          merchantOrderId: payment.merchantOrderId,
+          amount: payment.amount,
+          provider: payment.provider,
+        },
+        idempotencyKey: `settlement-${payment.orderId}`,
+      });
     } else if (callback.status === 'FAILED') {
       await this.transitionPayment(existing.id, 'FAILED');
     }
 
-    // 7. 发布领域事件（M5 接入 BullMQ 后，此处发送 PaymentSucceeded 事件）。
     // 8. ACK
     return { ack: 'ok' };
   }

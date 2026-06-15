@@ -3,6 +3,7 @@ import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { QueueModule } from './infrastructure/queue/queue.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { EnergyModule } from './modules/energy/energy.module';
@@ -18,6 +19,8 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule.forRoot(),
     PrismaModule,
+    // M5a：BullMQ 队列（领域事件生产者侧）
+    QueueModule,
     // M1：认证与用户模块
     AuthModule,
     UserModule,
