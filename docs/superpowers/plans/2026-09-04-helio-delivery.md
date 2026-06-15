@@ -258,33 +258,35 @@ Run: `git add apps/web && git commit -m "feat: complete operations console inter
 - Produces: `assertInternalRequest(headers)` and application-service methods receiving `AuthUser`.
 - Consumes: `INTERNAL_REQUEST_SECRET`, request headers and nonce storage.
 
-- [ ] **Step 1: Write failing ownership and internal-signature tests**
+- [x] **Step 1: Write failing ownership and internal-signature tests**
 
 Test user B cannot read user A's plant, device, bill, order or payment; test B cannot close/refund A's payment or resolve its reconciliation diff. Test an expired timestamp and a repeated nonce are rejected.
 
-- [ ] **Step 2: Run focused tests to verify failure**
+- [x] **Step 2: Run focused tests to verify failure**
 
 Run: `pnpm --filter @helio/api test -- authorization internal-request`
 
 Expected: failures expose missing principal propagation or absent signing verification.
 
-- [ ] **Step 3: Implement application-level authorization**
+- [x] **Step 3: Implement application-level authorization**
 
 Pass `AuthUser` through all relevant controller methods. Resolve ownership through linked plant/bill/order/payment records, allow privileged roles only where specified, and make services reject unauthorized data before return or mutation.
 
-- [ ] **Step 4: Implement signed worker requests**
+- [x] **Step 4: Implement signed worker requests**
 
 Worker signs `method + path + timestamp + nonce + body hash` with HMAC SHA-256. API validates timestamp skew, signature equality and one-time nonce storage in Redis; it rejects no-secret configuration outside local test mode.
 
-- [ ] **Step 5: Verify API and worker security behavior**
+- [x] **Step 5: Verify API and worker security behavior**
 
 Run: `pnpm --filter @helio/api test`, `pnpm --filter @helio/worker test`, `pnpm typecheck`
 
 Expected: all targeted security tests and workspace types pass.
 
-- [ ] **Step 6: Commit and push**
+- [x] **Step 6: Commit and push**
 
 Run: `git add apps && git commit -m "fix: enforce resource authorization" && git push`
+
+Validation note (2026-09-05): focused authorization and internal-request tests, API (136 tests), worker tests, root lint, typecheck, test, and build all passed. The commit and remote push for this milestone are recorded after the final working-tree checks.
 
 ### Task 6: Add integration, worker and browser coverage
 

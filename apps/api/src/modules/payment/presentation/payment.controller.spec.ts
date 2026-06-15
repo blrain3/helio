@@ -25,6 +25,7 @@ describe('PaymentController Mock callback endpoint', () => {
       {} as never,
       {} as never,
       { complete } as never,
+      {} as never,
     );
 
     await expect(controller.completeMockPayment('payment-1', user)).resolves.toEqual({ ack: 'ok' });
@@ -38,6 +39,7 @@ describe('PaymentController Mock callback endpoint', () => {
       const handleCallback = vi.fn().mockResolvedValue({ ack: 'ok' });
       const controller = new PaymentController(
         { handleCallback } as never,
+        {} as never,
         {} as never,
         {} as never,
       );
@@ -66,6 +68,7 @@ describe('PaymentController Mock callback endpoint', () => {
     const handleCallback = vi.fn().mockResolvedValue({ ack: 'ok' });
     const controller = new PaymentController(
       { handleCallback } as never,
+      {} as never,
       {} as never,
       {} as never,
     );

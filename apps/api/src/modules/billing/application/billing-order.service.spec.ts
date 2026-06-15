@@ -9,6 +9,9 @@ import {
   ValidationError,
 } from '../../auth/domain/errors';
 
+const owner = { sub: 'user-1', email: 'owner@example.com', role: 'USER' as const };
+const operator = { sub: 'operator-1', email: 'operator@example.com', role: 'OPERATOR' as const };
+
 describe('AmountCalculator', () => {
   const calc = new AmountCalculator();
 
@@ -128,7 +131,7 @@ describe('OrderService', () => {
     deps.bills.findById.mockResolvedValue(bill);
     deps.plants.findById.mockResolvedValue({ id: 'plant-1', name: 'p', capacity: 1, location: null, userId: 'user-1', createdAt: new Date(), updatedAt: new Date() });
     await expect(
-      service.create('b-1', 999, 'user-1'),
+      service.create('b-1', 999, owner),
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
@@ -137,21 +140,21 @@ describe('OrderService', () => {
     deps.bills.findById.mockResolvedValue(bill);
     deps.plants.findById.mockResolvedValue({ id: 'plant-1', name: 'p', capacity: 1, location: null, userId: 'user-1', createdAt: new Date(), updatedAt: new Date() });
     deps.orders.updateStatus.mockResolvedValue({ ...order, status: 'PENDING_PAYMENT' });
-    const result = await service.submitPayment('o-1', 'user-1');
+    const result = await service.submitPayment('o-1', owner);
     expect(result.status).toBe('PENDING_PAYMENT');
   });
 
   it('非法流转：CREATED 直接到 PAID 被拒绝', async () => {
     deps.orders.findById.mockResolvedValue(order);
     await expect(
-      service.confirmPaid('o-1'),
+      service.confirmPaid('o-1', operator),
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('支付成功：PENDING_PAYMENT → PAID 并联动账单', async () => {
     deps.orders.findById.mockResolvedValue({ ...order, status: 'PENDING_PAYMENT' });
     deps.orders.updateStatus.mockResolvedValue({ ...order, status: 'PAID' });
-    const result = await service.confirmPaid('o-1');
+    const result = await service.confirmPaid('o-1', operator);
     expect(result.status).toBe('PAID');
     expect(deps.bills.updateStatus).toHaveBeenCalledWith('b-1', 'PAID');
   });

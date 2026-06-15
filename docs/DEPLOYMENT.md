@@ -32,6 +32,6 @@ docker compose down --volumes
 
 ## 生产配置
 
-生产环境必须在部署平台的密钥管理中设置 `JWT_ACCESS_SECRET`、`JWT_REFRESH_SECRET` 和 `RECONCILE_INTERNAL_TOKEN`，并替换 PostgreSQL 凭据。Compose 中的默认值只为本地开发提供无凭据启动路径，不能用于公网环境。
+生产环境必须在部署平台的密钥管理中设置 `JWT_ACCESS_SECRET`、`JWT_REFRESH_SECRET` 和 `INTERNAL_REQUEST_SECRET`，并替换 PostgreSQL 凭据。Compose 中的默认值只为本地开发提供无凭据启动路径，不能用于公网环境。
 
 Web 镜像将 `/api/` 代理到 Compose 网络中的 `api:3000`。部署到其他编排平台时，应保留这一服务名网络关系，或在构建时通过 `VITE_API_BASE_URL` 指向实际 API 网关。
