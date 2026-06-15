@@ -132,31 +132,33 @@ Run: `git add package.json turbo.json eslint.config.mjs apps packages .github &&
 **Interfaces:**
 - Produces: `docker compose up --build` starts Web at port 8080 and API/worker use `postgres` and `redis` service hostnames.
 
-- [ ] **Step 1: Write a failing Compose configuration test**
+- [x] **Step 1: Write a failing Compose configuration test**
 
 Create a PowerShell verifier that parses `docker compose config`, requires `web`, requires API/worker service-name URLs, and requires a time-series migration file.
 
-- [ ] **Step 2: Run the verifier to verify failure**
+- [x] **Step 2: Run the verifier to verify failure**
 
 Run: `pwsh -File scripts/verify-compose.ps1`
 
 Expected: failure because `web` is absent and time-series DDL is not a migration.
 
-- [ ] **Step 3: Implement migration and container topology**
+- [x] **Step 3: Implement migration and container topology**
 
 Move idempotent partition functions and the materialized view into an ordered Prisma SQL migration. Add Web build/serve image and Nginx reverse proxy. Configure containers with `DATABASE_URL=postgresql://helio:helio@postgres:5432/helio`, `REDIS_HOST=redis`, `REDIS_URL=redis://redis:6379`, and `API_BASE_URL=http://api:3000`.
 
-- [ ] **Step 4: Add health checks and a documented production start path**
+- [x] **Step 4: Add health checks and a documented production start path**
 
 Expose API health/readiness endpoints, health-check API/worker/Web where appropriate, and describe local production deployment and browser API proxy behavior.
 
-- [ ] **Step 5: Verify Compose definition and image builds**
+- [x] **Step 5: Verify Compose definition and image builds**
 
 Run: `pwsh -File scripts/verify-compose.ps1`, `docker compose config --quiet`, and `docker compose build api worker web`
 
 Expected: each command exits 0. When Docker daemon is unavailable, record its exact external failure and retain static-config verification.
 
-- [ ] **Step 6: Commit and push**
+Validation note (2026-09-04): `pwsh -File scripts/verify-compose.ps1` and `docker compose config --quiet` passed. `docker compose build api worker web` could not run because Docker Desktop's `//./pipe/dockerDesktopLinuxEngine` daemon pipe was unavailable.
+
+- [x] **Step 6: Commit and push**
 
 Run: `git add docker-compose.yml apps docs scripts README.md && git commit -m "infra: make compose startup reproducible" && git push`
 
