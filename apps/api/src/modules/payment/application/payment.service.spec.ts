@@ -108,12 +108,13 @@ describe('PaymentService.handleCallback（七步回调链路）', () => {
     },
     gateway: new MockGateway(),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
+    events: { publish: vi.fn().mockResolvedValue(undefined) },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never);
+    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never, deps.events as never);
   });
 
   it('验签失败抛 UnauthorizedError', async () => {
@@ -188,6 +189,14 @@ describe('PaymentService.handleCallback（七步回调链路）', () => {
     expect(deps.payments.updateStatus).toHaveBeenCalledWith('p-1', 'SUCCESS');
     // 联动订单 → PAID
     expect(deps.orders.updateStatus).toHaveBeenCalledWith('o-1', 'PAID');
+    // 发布 PaymentSucceeded 领域事件（幂等键 = settlement-{orderId}）
+    expect(deps.events.publish).toHaveBeenCalledWith(
+      'settlement',
+      expect.objectContaining({
+        name: 'PaymentSucceeded',
+        idempotencyKey: 'settlement-o-1',
+      }),
+    );
   });
 
   it('幂等：已 SUCCESS 的支付重复回调直接 ACK，不重复流转', async () => {
@@ -239,12 +248,13 @@ describe('PaymentService.refund（退款金额校验）', () => {
     },
     gateway: new MockGateway(),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
+    events: { publish: vi.fn().mockResolvedValue(undefined) },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never);
+    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never, deps.events as never);
   });
 
   it('非 SUCCESS 状态不可退款', async () => {
@@ -305,12 +315,13 @@ describe('PaymentService.createPayment（下单）', () => {
     },
     gateway: new MockGateway(),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
+    events: { publish: vi.fn().mockResolvedValue(undefined) },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never);
+    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never, deps.events as never);
   });
 
   it('订单不存在抛 NotFoundError', async () => {

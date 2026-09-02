@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@helio/api": "workspace:*",
+    "@prisma/client": "^6.1.0",
     "bullmq": "^5.34.0",
     "ioredis": "^5.4.2",
     "dotenv": "^16.4.7"
