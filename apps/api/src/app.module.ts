@@ -10,6 +10,7 @@ import { EnergyModule } from './modules/energy/energy.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { AnomalyModule } from './modules/anomaly/anomaly.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -31,8 +32,8 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     OrderModule,
     // M4：支付系统
     PaymentModule,
-    // 后续里程碑将逐步接入：
-    // SettlementModule, AnomalyModule
+    // M5b：异常检测引擎
+    AnomalyModule,
   ],
   providers: [
     // 全局守卫：先鉴权（JWT），后授权（RBAC）。
