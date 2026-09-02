@@ -1,0 +1,23 @@
+{
+  "name": "@helio/ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Helio 共享 UI 组件封装（shadcn/ui + 业务组件）",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.5",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/react": "^19.0.0"
+  }
+}

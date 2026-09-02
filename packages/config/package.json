@@ -1,0 +1,12 @@
+{
+  "name": "@helio/config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Helio 共享 TypeScript / ESLint 配置",
+  "files": [
+    "tsconfig.base.json"
+  ],
+  "dependencies": {
+    "typescript": "^5.7.2"
+  }
+}
