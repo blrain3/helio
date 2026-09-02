@@ -40,7 +40,8 @@ model RefreshToken {
 model Plant {
   id        String   @id @default(uuid())
   name      String
-  capacity  Float // 装机容量 kW
+  capacity  Float    // 装机容量 kW
+  location  String?  // 安装地址
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -54,8 +55,11 @@ model Plant {
 model Device {
   id        String   @id @default(uuid())
   serialNo  String   @unique
+  name      String   @default("") // 设备名称
+  type      String   @default("INVERTER") // 设备类型：INVERTER/METER/SENSOR 等
   plantId   String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
 
@@ -72,13 +76,13 @@ model Tariff {
   createdAt   DateTime @default(now())
 }
 
-// 账单：consumed_kwh × unit_price = total_amount
+// 账单：consumed_kwh × unit_price = total_amount（单位：分）
 model Bill {
   id          String   @id @default(uuid())
   plantId     String
-  consumedKwh Float
-  unitPrice   Int      // 分
-  totalAmount Int      // 分，整数运算避免浮点误差
+  consumedKwh Decimal  @db.Decimal(10, 3) // 发电量，对齐时序 NUMERIC(10,3)
+  unitPrice   Int      // 单价（分 / billingUnit）
+  totalAmount Int      // 总额（分），整数运算避免浮点误差
   periodStart DateTime
   periodEnd   DateTime
   status      BillStatus @default(PENDING)
@@ -113,11 +117,14 @@ model Payment {
   providerTransactionId String?
   merchantOrderId       String        @unique
   amount                Int           // 分
+  refundedAmount        Int           @default(0) // 已退款金额（分），累计校验
   status                PaymentStatus @default(CREATED)
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  refunds Refund[]
 
   // 回调幂等：防第三方重复通知
   @@unique([provider, providerTransactionId])
@@ -126,11 +133,14 @@ model Payment {
 
 // 退款单
 model Refund {
-  id          String        @id @default(uuid())
-  paymentId   String
-  amount      Int           // 分
-  status      RefundStatus  @default(CREATED)
-  createdAt   DateTime      @default(now())
+  id               String       @id @default(uuid())
+  paymentId        String
+  refundNo         String       @unique // 退款单号（业务侧）
+  providerRefundId String?      // 渠道退款流水号
+  amount           Int          // 分
+  status           RefundStatus @default(CREATED)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 }
@@ -195,6 +205,7 @@ enum PaymentStatus {
   SUCCESS
   FAILED
   CLOSED
+  REFUNDED
 }
 
 enum RefundStatus {
