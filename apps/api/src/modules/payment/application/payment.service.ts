@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentRepository } from '../infrastructure/payment.repository';
-import { MockGateway } from '../infrastructure/mock.gateway';
+import { PaymentGatewayProvider } from '../infrastructure/gateway.provider';
 import { OrderRepository } from '../../order/infrastructure/order.repository';
 import {
   PaymentEntity,
@@ -29,7 +29,7 @@ import {
 export class PaymentService {
   constructor(
     private readonly payments: PaymentRepository,
-    private readonly gateway: MockGateway,
+    private readonly gateway: PaymentGatewayProvider,
     private readonly orders: OrderRepository,
     private readonly events: EventPublisher,
   ) {}

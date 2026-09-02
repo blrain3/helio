@@ -114,7 +114,7 @@ describe('PaymentService.handleCallback（七步回调链路）', () => {
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never, deps.events as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never);
   });
 
   it('验签失败抛 UnauthorizedError', async () => {
@@ -254,7 +254,7 @@ describe('PaymentService.refund（退款金额校验）', () => {
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never, deps.events as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never);
   });
 
   it('非 SUCCESS 状态不可退款', async () => {
@@ -321,7 +321,7 @@ describe('PaymentService.createPayment（下单）', () => {
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway, deps.orders as never, deps.events as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never);
   });
 
   it('订单不存在抛 NotFoundError', async () => {
