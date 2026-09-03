@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -18,6 +19,7 @@ import {
 } from '../application/dto/payment.dto';
 import { Public } from '../../../common/decorators/public.decorator';
 import { PaymentEntity, RefundEntity } from '../domain/payment.entity';
+import { UnauthorizedError } from '../../auth/domain/errors';
 
 /**
  * 支付控制器：支付创建、回调、退款、对账。
@@ -99,5 +101,34 @@ export class PaymentController {
     discrepancies: unknown[];
   }> {
     return this.reconciliation.reconcile(new Date(body.date));
+  }
+
+  @Post('reconcile/daily/internal')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '内部触发日对账（worker 定时调用，x-internal-token 校验）' })
+  @ApiResponse({ status: 200, description: '对账结果' })
+  async reconcileInternal(
+    @Headers('x-internal-token') token: string,
+    @Body() body: { date: string },
+  ): Promise<{
+    total: number;
+    matched: number;
+    discrepancies: unknown[];
+  }> {
+    const expected = process.env.RECONCILE_INTERNAL_TOKEN ?? 'helio-internal';
+    if (token !== expected) {
+      throw new UnauthorizedError('内部令牌无效');
+    }
+    return this.reconciliation.reconcile(new Date(body.date));
+  }
+
+  @Patch('reconcile/diff/:id/resolve')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '解决对账差异（PENDING → RESOLVED，解锁冻结退款）' })
+  @ApiResponse({ status: 200, description: '差异已解决' })
+  async resolveDiff(@Param('id') id: string): Promise<{ id: string; status: string }> {
+    return this.reconciliation.resolveDiff(id);
   }
 }

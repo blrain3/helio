@@ -109,12 +109,13 @@ describe('PaymentService.handleCallback（七步回调链路）', () => {
     gateway: new MockGateway(),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
+    reconciliation: { findPendingByPaymentId: vi.fn() },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never);
   });
 
   it('验签失败抛 UnauthorizedError', async () => {
@@ -249,17 +250,24 @@ describe('PaymentService.refund（退款金额校验）', () => {
     gateway: new MockGateway(),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
+    reconciliation: { findPendingByPaymentId: vi.fn() },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never);
   });
 
   it('非 SUCCESS 状态不可退款', async () => {
     deps.payments.findById.mockResolvedValue({ ...payment, status: 'PENDING' });
     await expect(service.refund('p-1', 1000, 'RFN1')).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it('存在未解决的对账差异时退款被冻结', async () => {
+    deps.payments.findById.mockResolvedValue(payment);
+    deps.reconciliation.findPendingByPaymentId.mockResolvedValueOnce({ id: 'd-1' });
+    await expect(service.refund('p-1', 1000, 'RFN-FROZEN')).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('退款金额超过可退金额被拒绝', async () => {
@@ -316,12 +324,13 @@ describe('PaymentService.createPayment（下单）', () => {
     gateway: new MockGateway(),
     orders: { findById: vi.fn(), updateStatus: vi.fn() },
     events: { publish: vi.fn().mockResolvedValue(undefined) },
+    reconciliation: { findPendingByPaymentId: vi.fn() },
   };
 
   let service: PaymentService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never);
+    service = new PaymentService(deps.payments as never, deps.gateway as never, deps.orders as never, deps.events as never, deps.reconciliation as never);
   });
 
   it('订单不存在抛 NotFoundError', async () => {
