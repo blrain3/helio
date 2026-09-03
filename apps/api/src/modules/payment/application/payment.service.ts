@@ -70,7 +70,7 @@ export class PaymentService {
       description: `订单 ${order.orderNo}`,
     });
 
-    return this.payments.create({
+    const payment = await this.payments.create({
       orderId,
       provider,
       providerTransactionId: result.providerTransactionId,
@@ -78,6 +78,38 @@ export class PaymentService {
       amount: order.amount,
       status: 'PENDING',
     });
+
+    // 入队延迟关单任务：超时窗口内未收到成功回调则自动关闭
+    // （Payment PENDING→CLOSED + Order PENDING_PAYMENT→CLOSED）。
+    // 以 paymentId 作为幂等键，延迟到超时窗口后由 worker 消费执行。
+    await this.events.publish(
+      QUEUES.PAYMENT,
+      {
+        name: 'PaymentTimeoutClose',
+        payload: {
+          paymentId: payment.id,
+          orderId,
+          merchantOrderId,
+        },
+        idempotencyKey: `payment-close-${payment.id}`,
+      },
+      { delay: this.paymentTimeoutMs },
+    );
+
+    return payment;
+  }
+
+  /**
+   * 支付超时关单窗口（毫秒）。
+   *
+   * 通过 `PAYMENT_TIMEOUT_MS` 配置（默认 30 分钟）。直接读 process.env 而非
+   * ConfigService：与 JwtTokenService 一致，规避 Vitest(esbuild) 下构造期
+   * DI 元数据缺失，同时保持 PaymentService 构造签名稳定。
+   */
+  private get paymentTimeoutMs(): number {
+    const raw = process.env.PAYMENT_TIMEOUT_MS;
+    const parsed = raw === undefined ? NaN : Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 30 * 60 * 1000;
   }
 
   /**

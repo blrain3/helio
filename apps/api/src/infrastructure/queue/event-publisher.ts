@@ -19,6 +19,7 @@ export const QUEUES = {
   STATISTICS: 'statistics',
   RECONCILIATION: 'reconciliation',
   ANOMALY: 'anomaly',
+  PAYMENT: 'payment',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -29,7 +30,8 @@ export type DomainEventName =
   | 'SettlementRequested'
   | 'StatisticsRefresh'
   | 'DailyReconciliation'
-  | 'AnomalyDetection';
+  | 'AnomalyDetection'
+  | 'PaymentTimeoutClose';
 
 export interface DomainEvent<T = Record<string, unknown>> {
   /** 事件名，worker 据此路由到具体处理器。 */
