@@ -124,3 +124,27 @@ export function canTransitionPayment(from: PaymentStatus, to: PaymentStatus): bo
 export function canTransitionRefund(from: RefundStatus, to: RefundStatus): boolean {
   return REFUND_TRANSITIONS[from]?.includes(to) ?? false;
 }
+
+/** 对账差异类型。 */
+export type ReconciliationDiffType =
+  | 'DISCREPANCY'
+  | 'MISSING_IN_STATEMENT'
+  | 'MISSING_IN_LOCAL';
+
+/** 对账差异状态机：PENDING（待处理，冻结关联退款）→ RESOLVED（已解决，解锁）。 */
+export type ReconciliationDiffStatus = 'PENDING' | 'RESOLVED';
+
+export const RECONCILIATION_DIFF_TRANSITIONS: Record<
+  ReconciliationDiffStatus,
+  ReconciliationDiffStatus[]
+> = {
+  PENDING: ['RESOLVED'],
+  RESOLVED: [],
+};
+
+export function canTransitionReconciliationDiff(
+  from: ReconciliationDiffStatus,
+  to: ReconciliationDiffStatus,
+): boolean {
+  return RECONCILIATION_DIFF_TRANSITIONS[from]?.includes(to) ?? false;
+}
