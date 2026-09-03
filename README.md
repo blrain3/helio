@@ -40,7 +40,7 @@ packages/
 └── config/      # 共享配置（TypeScript / ESLint）
 ```
 
-后端按业务域划分为 8 个模块：`auth`、`user`、`energy`、`billing`、`order`、`payment`、`settlement`、`anomaly`。
+后端按业务域划分为 7 个模块：`auth`、`user`、`energy`、`billing`、`order`、`payment`、`anomaly`（对账/结算属 `payment` 域，由 worker 定时任务触发）。
 
 ## 快速开始
 
