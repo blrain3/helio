@@ -10,14 +10,22 @@ import {
   PaymentCallback,
   RawStatementRow,
 } from '../domain/payment.entity';
+import { PaymentGatewayError } from '../../auth/domain/errors';
+import { decodeBillBuffer, parseAlipayTradeBill } from './bill-parser';
 
 /**
- * 支付宝适配器（真实渠道骨架）。
+ * 支付宝适配器（真实渠道）。
  *
  * 采用支付宝开放平台结构（app_id、应用私钥 RSA2 签名、支付宝公钥验签）。
- * 当前为「骨架」：签名算法按 RSA2（SHA256withRSA）落地，
- * 真实 HTTP 调用由 Node 内置 fetch 触发，仅在配置了真实凭据时启用；
- * 未配置凭据时返回可用的占位结果（不抛错，保证骨架可运行）。
+ * 主链路（下单/查单/关单/退款/验签）在配置了真实凭据时调用真实 API，未配置时
+ * 回退为可运行的占位结果（保证本地开发/测试可跑）。
+ *
+ * 对账单下载（downloadBill）则「不静默降级」：真实渠道场景下若凭据缺失或
+ * 接口调用失败，一律抛出 PaymentGatewayError（HTTP 502），由上层对账流程
+ * 捕获并上抛，避免把「渠道故障」误判为「当日无流水」污染对账结果。
+ *
+ * 签名（开放平台规范）：对业务参数按 key 升序拼接后，用应用私钥 RSA2
+ * （SHA256withRSA）签名，sign 以 base64 形式随请求提交。
  */
 @Injectable()
 export class AlipayGateway implements PaymentGateway {
@@ -30,6 +38,45 @@ export class AlipayGateway implements PaymentGateway {
     const appId = this.config.get<string>('ALIPAY_APP_ID', '');
     const privateKey = this.config.get<string>('ALIPAY_APP_PRIVATE_KEY', '');
     return Boolean(appId && privateKey);
+  }
+
+  /** 账单下载所需完整凭据（缺失即抛错，明确列出缺哪些）。 */
+  private billCredentials(): { appId: string; privateKey: string } {
+    const required: Array<[string, string]> = [
+      ['ALIPAY_APP_ID', '应用 AppID ALIPAY_APP_ID'],
+      ['ALIPAY_APP_PRIVATE_KEY', '应用私钥 ALIPAY_APP_PRIVATE_KEY'],
+    ];
+    const missing = required
+      .filter(([key]) => !this.config.get<string>(key, ''))
+      .map(([, label]) => label);
+    if (missing.length > 0) {
+      throw new PaymentGatewayError(
+        `支付宝对账单下载失败：未配置凭据（缺少 ${missing.join('、')}）。` +
+          `请补齐环境变量后重试；若暂未接入真实渠道，请将 PAYMENT_PROVIDER 保持为 mock。`,
+      );
+    }
+    return {
+      appId: this.config.get<string>('ALIPAY_APP_ID', ''),
+      privateKey: this.config.get<string>('ALIPAY_APP_PRIVATE_KEY', ''),
+    };
+  }
+
+  /** 对业务参数按 key 升序拼接后 RSA2 签名，返回含 sign 的完整参数。 */
+  private signParams(params: Record<string, string>, privateKey: string): Record<string, string> {
+    const content = Object.keys(params)
+      .sort()
+      .map((k) => `${k}=${params[k]}`)
+      .join('&');
+    let sign: string;
+    try {
+      sign = createSign('RSA-SHA256').update(content).sign(privateKey, 'base64');
+    } catch (err) {
+      throw new PaymentGatewayError(
+        `支付宝对账单下载失败：应用私钥非法或格式错误（${(err as Error).message}）。` +
+          `请确认 ALIPAY_APP_PRIVATE_KEY 为 PEM 格式（含 BEGIN/END 行）。`,
+      );
+    }
+    return { ...params, sign };
   }
 
   async createPayment(req: CreatePaymentRequest): Promise<CreatePaymentResult> {
@@ -49,7 +96,7 @@ export class AlipayGateway implements PaymentGateway {
         method: 'alipay.trade.precreate',
         charset: 'utf-8',
         sign_type: 'RSA2',
-        timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z').replace('T', ' '),
+        timestamp: alipayTimestamp(new Date()),
         version: '1.0',
         biz_content: JSON.stringify(bizContent),
       });
@@ -107,16 +154,72 @@ export class AlipayGateway implements PaymentGateway {
   }
 
   /**
-   * 下载对账单（骨架）：真实场景调用 alipay.data.dataservice.bill.downloadurl.query
-   * 获取账单下载地址，再下载 zip/csv 并解析。
-   * 当前骨架在未配置凭据时返回空账单行（无对账单数据），
-   * 上层对账据此将本地流水标记为 MISSING_IN_STATEMENT。
+   * 下载对账单（真实渠道）：
+   * 1. alipay.data.dataservice.bill.downloadurl.query（RSA2 签名 POST）申请下载地址；
+   * 2. 下载账单文件并解压/解析为 RawStatementRow。
+   *
+   * 凭据缺失 / 申请失败 / 下载失败 / 格式不符 均抛 PaymentGatewayError（不静默返回空）。
    */
   async downloadBill(billDate: Date): Promise<RawStatementRow[]> {
-    this.logger.warn(
-      `支付宝对账单下载为骨架实现（billDate=${billDate.toISOString().slice(0, 10)}），返回空账单`,
+    const { appId, privateKey } = this.billCredentials();
+    const day = billDate.toISOString().slice(0, 10);
+    const bizContent = JSON.stringify({ bill_type: 'trade', bill_date: day });
+    const params = this.signParams(
+      {
+        app_id: appId,
+        method: 'alipay.data.dataservice.bill.downloadurl.query',
+        format: 'JSON',
+        charset: 'utf-8',
+        sign_type: 'RSA2',
+        timestamp: alipayTimestamp(new Date()),
+        version: '1.0',
+        biz_content: bizContent,
+      },
+      privateKey,
     );
-    return [];
+
+    // 第一步：申请账单下载地址。
+    let applyResp: Response;
+    try {
+      applyResp = await fetch('https://openapi.alipay.com/gateway.do', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+        body: new URLSearchParams(params).toString(),
+      });
+    } catch (err) {
+      throw new PaymentGatewayError(
+        `支付宝对账单申请失败：网络错误 ${(err as Error).message}`,
+      );
+    }
+    const apply = (await applyResp.json().catch(() => ({}))) as {
+      alipay_data_dataservice_bill_downloadurl_query_response?: {
+        code?: string;
+        msg?: string;
+        bill_download_url?: string;
+      };
+    };
+    const respBody = apply.alipay_data_dataservice_bill_downloadurl_query_response;
+    const downloadUrl = respBody?.bill_download_url;
+    if (!respBody || respBody.code !== '10000' || !downloadUrl) {
+      throw new PaymentGatewayError(
+        `支付宝对账单申请失败：${respBody?.code ?? '无响应'} ${respBody?.msg ?? ''}`.trim(),
+      );
+    }
+
+    // 第二步：下载账单文件。
+    let dlResp: Response;
+    try {
+      dlResp = await fetch(downloadUrl, { method: 'GET' });
+    } catch (err) {
+      throw new PaymentGatewayError(
+        `支付宝对账单下载失败：网络错误 ${(err as Error).message}`,
+      );
+    }
+    if (!dlResp.ok) {
+      throw new PaymentGatewayError(`支付宝对账单下载失败：HTTP ${dlResp.status}`);
+    }
+    const buffer = await dlResp.arrayBuffer();
+    return parseAlipayTradeBill(decodeBillBuffer(buffer));
   }
 
   /** 生成回调签名（联调/测试便利）。真实场景由支付宝使用商户私钥生成。 */
@@ -134,4 +237,13 @@ export class AlipayGateway implements PaymentGateway {
     }
     return createHash('sha256').update(raw).digest('hex');
   }
+}
+
+/** 生成支付宝开放平台要求的 `yyyy-MM-dd HH:mm:ss` 时间戳（本地时区）。 */
+function alipayTimestamp(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  );
 }
