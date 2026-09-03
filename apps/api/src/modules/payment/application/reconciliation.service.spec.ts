@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ReconciliationService } from './reconciliation.service';
-import { NotFoundError } from '../../auth/domain/errors';
+import { NotFoundError, ValidationError } from '../../auth/domain/errors';
 import { canTransitionReconciliationDiff } from '../domain/payment.entity';
 
 describe('Reconciliation diff state machine', () => {
@@ -23,12 +23,17 @@ describe('ReconciliationService.resolveDiff（差异处置：解锁冻结）', (
       create: vi.fn(),
       findPendingByPaymentId: vi.fn(),
     },
+    gateway: { downloadBill: vi.fn() },
   };
 
   let service: ReconciliationService;
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ReconciliationService(deps.prisma as never, deps.diffs as never);
+    service = new ReconciliationService(
+      deps.prisma as never,
+      deps.diffs as never,
+      deps.gateway as never,
+    );
   });
 
   it('差异不存在抛 NotFoundError', async () => {
@@ -65,35 +70,28 @@ describe('ReconciliationService.reconcile（差异检测 + 冻结关联）', () 
 
   const deps = {
     prisma: { payment: { findMany: vi.fn() } },
-    diffs: {
-      findById: vi.fn(),
-      resolve: vi.fn(),
-      create: vi.fn().mockResolvedValue(undefined),
-      findPendingByPaymentId: vi.fn(),
-    },
+    diffs: { create: vi.fn().mockResolvedValue(undefined) },
+    gateway: { downloadBill: vi.fn() },
   };
 
-  // 通过子类注入合成对账单，覆盖 Mock 默认「与本地一致」。
-  // 合成对账单：ORD1 金额不一致（DISCREPANCY）；ORD2 一致；ORD3 缺失（MISSING_IN_STATEMENT）；
-  //             ORD4 仅存在于对账单（MISSING_IN_LOCAL）。
-  class TestableReconciliationService extends ReconciliationService {
-    protected override async generateStatement(
-      _start: Date,
-      _end: Date,
-    ): Promise<Array<{ merchantOrderId: string; amount: number; status: string }>> {
-      return [
-        { merchantOrderId: 'ORD1', amount: 9999, status: 'SUCCESS' },
-        { merchantOrderId: 'ORD2', amount: 20000, status: 'SUCCESS' },
-        { merchantOrderId: 'ORD4', amount: 40000, status: 'SUCCESS' },
-      ];
-    }
-  }
+  const makeService = () =>
+    new ReconciliationService(deps.prisma as never, deps.diffs as never, deps.gateway as never);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('检测三类差异并统一落库 PENDING（冻结），paymentId 关联正确', async () => {
     deps.prisma.payment.findMany.mockResolvedValue(localPayments);
-    const service = new TestableReconciliationService(deps.prisma as never, deps.diffs as never);
+    // 合成对账单：ORD1 金额不一致（DISCREPANCY）；ORD2 一致；ORD3 缺失（MISSING_IN_STATEMENT）；
+    //             ORD4 仅存在于对账单（MISSING_IN_LOCAL）。
+    deps.gateway.downloadBill.mockResolvedValue([
+      { merchantOrderId: 'ORD1', amount: 9999, status: 'SUCCESS' },
+      { merchantOrderId: 'ORD2', amount: 20000, status: 'SUCCESS' },
+      { merchantOrderId: 'ORD4', amount: 40000, status: 'SUCCESS' },
+    ]);
 
-    const result = await service.reconcile(new Date('2026-09-01'));
+    const result = await makeService().reconcile(new Date('2026-09-01'));
 
     expect(result.total).toBe(3);
     expect(result.matched).toBe(1); // 仅 ORD2 一致
@@ -116,6 +114,70 @@ describe('ReconciliationService.reconcile（差异检测 + 冻结关联）', () 
     );
     expect(deps.diffs.create).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'PENDING', paymentId: null }),
+    );
+  });
+});
+
+describe('ReconciliationService 异常场景（对账单下载与解析）', () => {
+  const deps = {
+    prisma: { payment: { findMany: vi.fn() } },
+    diffs: { create: vi.fn() },
+    gateway: { downloadBill: vi.fn() },
+  };
+
+  const makeService = () =>
+    new ReconciliationService(deps.prisma as never, deps.diffs as never, deps.gateway as never);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    deps.prisma.payment.findMany.mockResolvedValue([]);
+  });
+
+  it('下载失败：gateway.downloadBill 抛错上抛（供上层重试）', async () => {
+    deps.gateway.downloadBill.mockRejectedValue(new Error('channel download failed'));
+    await expect(makeService().reconcile(new Date('2026-09-01'))).rejects.toThrow(
+      'channel download failed',
+    );
+  });
+
+  it('解析失败：对账单行金额非正整数分 → ValidationError', async () => {
+    deps.gateway.downloadBill.mockResolvedValue([
+      { merchantOrderId: 'ORD1', amount: '100', status: 'SUCCESS' },
+    ]);
+    await expect(makeService().reconcile(new Date('2026-09-01'))).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
+  it('格式不符：缺少 merchantOrderId → ValidationError', async () => {
+    deps.gateway.downloadBill.mockResolvedValue([{ amount: 100, status: 'SUCCESS' }]);
+    await expect(makeService().reconcile(new Date('2026-09-01'))).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
+  it('格式不符：对账单行为非对象 → ValidationError', async () => {
+    deps.gateway.downloadBill.mockResolvedValue([null]);
+    await expect(makeService().reconcile(new Date('2026-09-01'))).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
+  it('对账金额不匹配：DISCREPANCY 落库并冻结关联支付', async () => {
+    deps.prisma.payment.findMany.mockResolvedValue([
+      { id: 'p-1', merchantOrderId: 'ORD1', amount: 10000, status: 'SUCCESS', createdAt: new Date('2026-09-01T10:00:00Z') },
+    ]);
+    deps.gateway.downloadBill.mockResolvedValue([
+      { merchantOrderId: 'ORD1', amount: 9999, status: 'SUCCESS' },
+    ]);
+
+    const result = await makeService().reconcile(new Date('2026-09-01'));
+
+    expect(result.matched).toBe(0);
+    expect(result.discrepancies).toHaveLength(1);
+    expect(result.discrepancies[0]!.result).toBe('DISCREPANCY');
+    expect(deps.diffs.create).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'DISCREPANCY', status: 'PENDING', paymentId: 'p-1' }),
     );
   });
 });

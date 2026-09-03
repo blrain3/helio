@@ -7,7 +7,9 @@ import {
   CreatePaymentRequest,
   CreatePaymentResult,
   PaymentCallback,
+  RawStatementRow,
 } from '../domain/payment.entity';
+import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 
 /**
  * Mock 支付网关（一等公民，非临时测试代码）。
@@ -17,6 +19,9 @@ import {
  *
  * 验签算法（可替换为真实渠道的 RSA/SHA256 方案）：
  *   signature = sha256(merchantOrderId + providerTransactionId + amount + secret)
+ *
+ * 对账：Mock 渠道无独立存储，`downloadBill` 以「与本地 SUCCESS 流水一致」的
+ * 方式合成对账单，使日对账在 Mock 主链路下不产生差异。
  */
 @Injectable()
 export class MockGateway implements PaymentGateway {
@@ -24,6 +29,8 @@ export class MockGateway implements PaymentGateway {
 
   /** Mock 商户密钥（生产可替换为配置）。 */
   private readonly secret = 'helio-mock-secret';
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async createPayment(req: CreatePaymentRequest): Promise<CreatePaymentResult> {
     // 模拟渠道交易号：MOCK + 时间戳 + 随机段。
@@ -59,6 +66,37 @@ export class MockGateway implements PaymentGateway {
       callback.amount,
     );
     return expected === callback.signature;
+  }
+
+  /**
+   * 下载对账单（Mock）：渠道侧无独立存储，合成「与本地 SUCCESS 流水一致」的
+   * 对账单原始行。真实渠道由 WeChat/Alipay 经 API 下载。
+   */
+  async downloadBill(billDate: Date): Promise<RawStatementRow[]> {
+    const start = new Date(billDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(billDate);
+    end.setHours(23, 59, 59, 999);
+
+    const local = await this.prisma.payment.findMany({
+      where: { status: 'SUCCESS', createdAt: { gte: start, lte: end } },
+      select: {
+        merchantOrderId: true,
+        amount: true,
+        status: true,
+        providerTransactionId: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return local.map((p) => ({
+      merchantOrderId: p.merchantOrderId,
+      amount: p.amount,
+      status: p.status,
+      providerTransactionId: p.providerTransactionId ?? undefined,
+      tradeTime: p.updatedAt.toISOString(),
+    }));
   }
 
   /**

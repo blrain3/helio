@@ -7,6 +7,7 @@ import {
   CreatePaymentRequest,
   CreatePaymentResult,
   PaymentCallback,
+  RawStatementRow,
 } from '../domain/payment.entity';
 import { MockGateway } from './mock.gateway';
 import { WeChatGateway } from './wechat.gateway';
@@ -142,5 +143,13 @@ export class PaymentGatewayProvider implements PaymentGateway {
     // 影子模式下仍以主网关（mock）为准；真实渠道回调经 provider 字段路由。
     const gateway = this.gatewayFor(callback.provider);
     return gateway.verifyCallback(callback);
+  }
+
+  /**
+   * 下载某日对账单：对账以「主网关」为准（source of truth），
+   * 不参与影子调用（旁路渠道的账单不用于主对账）。
+   */
+  async downloadBill(billDate: Date): Promise<RawStatementRow[]> {
+    return this.primary.downloadBill(billDate);
   }
 }

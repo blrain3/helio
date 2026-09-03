@@ -77,6 +77,26 @@ export interface PaymentCallback {
 }
 
 /**
+ * 渠道对账单原始行（downloadBill 下载后的原始数据结构，尚未规范化）。
+ * 各渠道字段各异，通过 [key: string]: unknown 保留原始字段供审计；
+ * 核心字段（merchantOrderId/amount/status）用于与本地支付流水关联。
+ */
+export interface RawStatementRow {
+  /** 商户订单号（业务侧），与本地支付 merchantOrderId 对齐。 */
+  merchantOrderId: string;
+  /** 交易金额（分）。 */
+  amount: number;
+  /** 渠道交易状态。 */
+  status: string;
+  /** 渠道交易号（可选）。 */
+  providerTransactionId?: string;
+  /** 交易时间（渠道侧，可选，ISO 字符串）。 */
+  tradeTime?: string;
+  /** 其他原始字段（保留）。 */
+  [key: string]: unknown;
+}
+
+/**
  * 支付网关抽象接口。
  * Mock / WeChat / Alipay 均实现此接口，通过 DI 或配置切换（可插拔第三方服务）。
  */
@@ -97,6 +117,9 @@ export interface PaymentGateway {
 
   /** 校验回调签名。 */
   verifyCallback(callback: PaymentCallback): boolean;
+
+  /** 下载某日的渠道对账单（原始行）。 */
+  downloadBill(billDate: Date): Promise<RawStatementRow[]>;
 }
 
 /** 支付状态机：定义合法流转。 */

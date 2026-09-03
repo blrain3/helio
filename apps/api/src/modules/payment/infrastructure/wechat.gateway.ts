@@ -8,6 +8,7 @@ import {
   CreatePaymentRequest,
   CreatePaymentResult,
   PaymentCallback,
+  RawStatementRow,
 } from '../domain/payment.entity';
 
 /**
@@ -98,6 +99,19 @@ export class WeChatGateway implements PaymentGateway {
     const raw = `${callback.merchantOrderId}${callback.providerTransactionId}${callback.amount}`;
     const expected = createHmac('sha256', key).update(raw).digest('hex');
     return expected === callback.signature;
+  }
+
+  /**
+   * 下载对账单（骨架）：真实场景调用微信「交易账单下载」
+   * GET /v3/bill/tradebill?bill_date=YYYY-MM-DD&bill_type=ALL，再下载账单文件并解析。
+   * 当前骨架在未配置凭据时返回空账单行（无对账单数据），
+   * 上层对账据此将本地流水标记为 MISSING_IN_STATEMENT。
+   */
+  async downloadBill(billDate: Date): Promise<RawStatementRow[]> {
+    this.logger.warn(
+      `微信对账单下载为骨架实现（billDate=${billDate.toISOString().slice(0, 10)}），返回空账单`,
+    );
+    return [];
   }
 
   /** 生成回调签名（联调/测试便利）。 */
