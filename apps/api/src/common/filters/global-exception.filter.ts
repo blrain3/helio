@@ -44,7 +44,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message = exception.message;
     } else if (exception instanceof Error) {
       // 兜底：记录原始错误信息，避免丢失排查线索（但仍返回通用 500）。
-      // eslint-disable-next-line no-console
       console.error('[UnhandledException]', exception);
       message = exception.message || message;
     }

@@ -6,11 +6,15 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "generate": "openapi-typescript ../api/openapi.json -o ./src/schema.d.ts",
-    "build": "tsc -p tsconfig.json"
+    "generate": "pnpm --filter @helio/api prisma:generate && pnpm --filter @helio/api openapi:export && openapi-typescript ../../apps/api/openapi.json -o ./src/schema.d.ts",
+    "build": "pnpm run generate && tsc -p tsconfig.json",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "openapi-typescript": "^7.4.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

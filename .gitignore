@@ -44,8 +44,5 @@ __pycache__/
 # Prisma 生成的客户端（运行时由 prisma generate 重建）
 apps/api/node_modules/.prisma/
 
-# 内部文档（仅本地保留，不进版本库）
-docs/
-
 # WorkBuddy 项目数据（保留，勿删）
 .workbuddy/

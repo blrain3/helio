@@ -4,6 +4,7 @@ WORKDIR /app
 RUN corepack enable
 COPY . .
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @helio/api prisma:generate
 RUN pnpm --filter @helio/worker build
 
 FROM node:20-alpine AS runner

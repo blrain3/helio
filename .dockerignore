@@ -1,0 +1,8 @@
+.git
+.worktrees
+**/node_modules
+**/dist
+**/.turbo
+apps/api/.env
+.env
+docs

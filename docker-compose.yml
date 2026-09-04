@@ -34,8 +34,23 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     container_name: helio-api
-    env_file:
-      - apps/api/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://helio:helio@postgres:5432/helio
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-helio-local-access-secret-change-before-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-helio-local-refresh-secret-change-before-production}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PAYMENT_SHADOW: ${PAYMENT_SHADOW:-false}
+      PAYMENT_TIMEOUT_MS: ${PAYMENT_TIMEOUT_MS:-1800000}
+      RECONCILE_INTERNAL_TOKEN: ${RECONCILE_INTERNAL_TOKEN:-helio-local-internal-token}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}
     ports:
       - "3000:3000"
     depends_on:
@@ -43,6 +58,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
     restart: unless-stopped
 
   worker:
@@ -50,13 +71,45 @@ services:
       context: .
       dockerfile: apps/worker/Dockerfile
     container_name: helio-worker
-    env_file:
-      - apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://helio:helio@postgres:5432/helio
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      API_BASE_URL: http://api:3000
+      RECONCILE_INTERNAL_TOKEN: ${RECONCILE_INTERNAL_TOKEN:-helio-local-internal-token}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.kill(1, 0)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: helio-web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
 
 volumes:
