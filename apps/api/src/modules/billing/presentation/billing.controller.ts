@@ -20,6 +20,13 @@ import { BillEntity } from '../domain/bill.entity';
 export class BillingController {
   constructor(private readonly billing: BillingService) {}
 
+  @Get()
+  @ApiOperation({ summary: '查询当前用户账单列表' })
+  @ApiResponse({ status: 200, description: '账单列表' })
+  async list(@CurrentUser() user: AuthUser): Promise<BillEntity[]> {
+    return this.billing.listByUser(user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '按 id 查询账单' })
   @ApiResponse({ status: 200, description: '账单信息' })

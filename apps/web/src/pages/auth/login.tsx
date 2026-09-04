@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate, useSearchParams } from 'react-router';
+import { auth } from '../../lib/auth';
+import { useSession } from '../../lib/session';
 
 interface LoginForm {
   email: string;
@@ -8,17 +11,32 @@ interface LoginForm {
 
 /** 登录页（独立于 AppShell）。 */
 export function Component() {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated } = useSession();
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
 
-  const onSubmit = (values: LoginForm) => {
-    // 接入后端后：调用 POST /auth/login 获取 JWT 并写入本地存储，再跳转 /dashboard。
-    console.info('登录提交（演示，未接入后端）:', values);
-    setSubmitted(true);
+  const redirectTo = safeRedirect(searchParams.get('redirectTo'));
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectTo, { replace: true });
+    }
+  }, [isAuthenticated, navigate, redirectTo]);
+
+  const onSubmit = async (values: LoginForm) => {
+    setSubmitError(null);
+    try {
+      await auth.login(values);
+      navigate(redirectTo, { replace: true });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : '登录失败，请稍后重试');
+    }
   };
 
   return (
@@ -59,18 +77,24 @@ export function Component() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full rounded-lg bg-yellow-400 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-yellow-300"
           >
-            登录
+            {isSubmitting ? '登录中...' : '登录'}
           </button>
         </form>
 
-        {submitted && (
-          <p className="mt-4 text-center text-xs text-slate-400">
-            演示模式：登录接口待接入，提交仅作表单验证。
-          </p>
+        {submitError && (
+          <p className="mt-4 text-center text-xs text-rose-600">{submitError}</p>
         )}
       </div>
     </div>
   );
+}
+
+function safeRedirect(value: string | null): string {
+  if (value?.startsWith('/') && !value.startsWith('//')) {
+    return value;
+  }
+  return '/dashboard';
 }

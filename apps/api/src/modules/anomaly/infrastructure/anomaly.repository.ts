@@ -102,6 +102,18 @@ export class AnomalyRepository {
     return events.map((e) => this.toEventEntity(e));
   }
 
+  async listEventsByPlantIds(plantIds: string[]): Promise<AnomalyEventEntity[]> {
+    if (plantIds.length === 0) {
+      return [];
+    }
+
+    const events = await this.prisma.anomalyEvent.findMany({
+      where: { plantId: { in: plantIds } },
+      orderBy: { detectedAt: 'desc' },
+    });
+    return events.map((event) => this.toEventEntity(event));
+  }
+
   // ===================== 映射 =====================
 
   private toRuleEntity(r: {

@@ -14,9 +14,9 @@ export interface Plant {
   createdAt: string;
 }
 
-export type DeviceType = 'INVERTER' | 'PANEL' | 'METER' | 'BATTERY';
+export type DeviceType = 'INVERTER' | 'PANEL' | 'METER' | 'BATTERY' | 'SENSOR' | 'OTHER';
 
-export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'FAULT';
+export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'FAULT' | 'UNKNOWN';
 
 export interface Device {
   id: string;
@@ -27,7 +27,7 @@ export interface Device {
   status: DeviceStatus;
 }
 
-export type BillStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'OVERDUE';
+export type BillStatus = 'DRAFT' | 'PENDING' | 'ISSUED' | 'PAID' | 'OVERDUE';
 
 export interface Bill {
   id: string;
@@ -42,11 +42,18 @@ export interface Bill {
   createdAt: string;
 }
 
-export type OrderStatus = 'CREATED' | 'PENDING' | 'PAID' | 'CLOSED' | 'REFUNDED';
+export type OrderStatus =
+  | 'CREATED'
+  | 'PENDING'
+  | 'PENDING_PAYMENT'
+  | 'PAID'
+  | 'COMPLETED'
+  | 'CLOSED'
+  | 'REFUNDED';
 
 export interface Order {
   id: string;
-  billId: string;
+  billId: string | null;
   /** 金额（分） */
   amount: number;
   status: OrderStatus;
@@ -74,7 +81,7 @@ export interface Payment {
   createdAt: string;
 }
 
-export type AnomalyType = 'MISSING_DATA' | 'ENERGY_SPIKE' | 'DEVICE_OFFLINE';
+export type AnomalyType = string;
 
 export type AnomalyStatus = 'OPEN' | 'RESOLVED';
 

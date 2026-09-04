@@ -159,6 +159,11 @@ export class AnomalyService {
     return this.anomalies.listEvents(plantId, start, end);
   }
 
+  async listEventsByUser(userId: string): Promise<AnomalyEventEntity[]> {
+    const plants = await this.plants.findByUserId(userId);
+    return this.anomalies.listEventsByPlantIds(plants.map((plant) => plant.id));
+  }
+
   private async assertOwnable(plantId: string, userId: string): Promise<void> {
     const plant = await this.plants.findById(plantId);
     if (!plant) {

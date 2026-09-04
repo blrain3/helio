@@ -25,6 +25,18 @@ export class PaymentRepository {
     return p ? this.toPaymentEntity(p) : null;
   }
 
+  async findByOrderIds(orderIds: string[]): Promise<PaymentEntity[]> {
+    if (orderIds.length === 0) {
+      return [];
+    }
+
+    const payments = await this.prisma.payment.findMany({
+      where: { orderId: { in: orderIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return payments.map((payment) => this.toPaymentEntity(payment));
+  }
+
   /** 按渠道 + 渠道交易号查询（幂等校验用）。 */
   async findByProviderTransaction(
     provider: PaymentProvider,
