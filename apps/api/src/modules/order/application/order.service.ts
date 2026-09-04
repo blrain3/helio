@@ -44,6 +44,19 @@ export class OrderService {
     return this.orders.findByBillIds(billGroups.flat().map((bill) => bill.id));
   }
 
+  async assertOwnedByUser(id: string, userId: string): Promise<void> {
+    const order = await this.findById(id);
+    if (!order.billId) {
+      throw new ForbiddenError('无权操作该订单');
+    }
+
+    const bill = await this.bills.findById(order.billId);
+    if (!bill) {
+      throw new NotFoundError('账单不存在');
+    }
+    await this.assertOwnable(bill.plantId, userId);
+  }
+
   /**
    * 创建订单（基于账单）：
    * 1. 校验账单存在；

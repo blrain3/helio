@@ -16,6 +16,7 @@ configureApiInvalidation(async (keys) => {
 browserSessionStore.subscribe(() => {
   if (!browserSessionStore.getSession()) {
     queryClient.clear();
+    router.revalidate();
   }
 });
 

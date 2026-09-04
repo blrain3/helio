@@ -62,8 +62,11 @@ export class PaymentController {
   @ApiBearerAuth()
   @ApiOperation({ summary: '开发环境完成 Mock 支付并触发已签名回调' })
   @ApiResponse({ status: 200, description: 'Mock 回调已处理' })
-  async completeMockPayment(@Param('id') id: string): Promise<{ ack: string }> {
-    return this.mockPayments.complete(id);
+  async completeMockPayment(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<{ ack: string }> {
+    return this.mockPayments.complete(id, user);
   }
 
   @Post('callback')

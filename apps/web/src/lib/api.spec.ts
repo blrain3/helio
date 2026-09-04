@@ -292,4 +292,148 @@ describe('authenticated API client', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(sessions.getSession()).toBeNull();
   });
+
+  it('shares one refresh after concurrent 401s and retries both requests with rotated tokens', async () => {
+    const sessions = createSessionStore(new MemoryStorage(), () => 'browser-device-1');
+    sessions.saveSession({
+      accessToken: 'expired-access-token',
+      refreshToken: 'refresh-token-1',
+      deviceId: 'browser-device-1',
+    });
+    const refresh = deferred<Response>();
+    const seenResources = new Set<string>();
+    let refreshRequests = 0;
+    const fetch = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/refresh')) {
+        refreshRequests += 1;
+        return refresh.promise;
+      }
+
+      if (url.endsWith('/plants') || url.endsWith('/bills')) {
+        if (!seenResources.has(url)) {
+          seenResources.add(url);
+          return Promise.resolve(unauthorizedResponse());
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ path: new URL(url).pathname }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
+      }
+
+      throw new Error(`unexpected request: ${url}`);
+    });
+    const client = createAuthenticatedClient({
+      baseUrl: 'https://api.helio.test',
+      fetch,
+      sessions,
+    });
+
+    const plants = client.request<{ path: string }>('/plants');
+    const bills = client.request<{ path: string }>('/bills');
+
+    await nextTurn();
+    expect(refreshRequests).toBe(1);
+
+    refresh.resolve(
+      new Response(
+        JSON.stringify({
+          tokens: {
+            accessToken: 'rotated-access-token',
+            refreshToken: 'rotated-refresh-token',
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
+    );
+
+    await expect(Promise.all([plants, bills])).resolves.toEqual([
+      { path: '/plants' },
+      { path: '/bills' },
+    ]);
+
+    const retryCalls = fetch.mock.calls.filter(([input]) => {
+      const url = String(input);
+      return url.endsWith('/plants') || url.endsWith('/bills');
+    });
+    expect(retryCalls).toHaveLength(4);
+    expect(new Headers(retryCalls[2]?.[1]?.headers).get('authorization')).toBe(
+      'Bearer rotated-access-token',
+    );
+    expect(new Headers(retryCalls[3]?.[1]?.headers).get('authorization')).toBe(
+      'Bearer rotated-access-token',
+    );
+    expect(sessions.getSession()).toMatchObject({
+      accessToken: 'rotated-access-token',
+      refreshToken: 'rotated-refresh-token',
+    });
+  });
+
+  it('keeps a newer login session when an older refresh request fails', async () => {
+    const sessions = createSessionStore(new MemoryStorage(), () => 'browser-device-1');
+    sessions.saveSession({
+      accessToken: 'expired-access-token',
+      refreshToken: 'refresh-token-1',
+      deviceId: 'browser-device-1',
+    });
+    const refresh = deferred<Response>();
+    const fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/plants')) {
+        return Promise.resolve(unauthorizedResponse());
+      }
+      if (url.endsWith('/auth/refresh')) {
+        return refresh.promise;
+      }
+      throw new Error(`unexpected request: ${url}`);
+    });
+    const client = createAuthenticatedClient({
+      baseUrl: 'https://api.helio.test',
+      fetch,
+      sessions,
+    });
+
+    const request = client.request('/plants');
+    await nextTurn();
+    sessions.saveSession({
+      accessToken: 'new-login-access-token',
+      refreshToken: 'new-login-refresh-token',
+      deviceId: 'browser-device-1',
+    });
+    refresh.resolve(unauthorizedResponse());
+
+    await expect(request).rejects.toMatchObject({ status: 401 });
+    expect(sessions.getSession()).toMatchObject({
+      accessToken: 'new-login-access-token',
+      refreshToken: 'new-login-refresh-token',
+    });
+  });
 });
+
+function unauthorizedResponse(): Response {
+  return new Response(JSON.stringify({ message: 'expired' }), {
+    status: 401,
+    statusText: 'Unauthorized',
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function nextTurn(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
