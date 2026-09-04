@@ -43,4 +43,18 @@ describe('createOpenApiDocument', () => {
     expect(document.paths).toHaveProperty('/plants');
     expect(document.paths).not.toHaveProperty('/api/plants');
   });
+
+  it('documents authenticated console collections and the Mock-only completion action', () => {
+    const document = createOpenApiDocument(app);
+
+    expect(document.paths).toHaveProperty('/devices');
+    expect(document.paths).toHaveProperty('/bills');
+    expect(document.paths).toHaveProperty('/orders');
+    expect(document.paths).toHaveProperty('/payments');
+    expect(document.paths).toHaveProperty('/anomalies');
+    expect(document.paths).toHaveProperty('/payments/{id}/mock-complete');
+    expect(document.paths['/payments/{id}/mock-complete']?.post?.security).toEqual([
+      { bearer: [] },
+    ]);
+  });
 });

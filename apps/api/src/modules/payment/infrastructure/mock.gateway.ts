@@ -69,6 +69,38 @@ export class MockGateway implements PaymentGateway {
   }
 
   /**
+   * Builds the callback consumed by the normal payment service during local
+   * Mock demonstrations. The signing secret stays inside this server module.
+   */
+  createSuccessCallback(payment: {
+    id: string;
+    providerTransactionId: string | null;
+    merchantOrderId: string;
+    amount: number;
+  }): PaymentCallback {
+    if (!payment.providerTransactionId) {
+      throw new Error('Mock 支付流水缺少渠道交易号');
+    }
+
+    return {
+      provider: 'mock',
+      providerTransactionId: payment.providerTransactionId,
+      merchantOrderId: payment.merchantOrderId,
+      amount: payment.amount,
+      status: 'SUCCESS',
+      signature: this.sign(
+        payment.merchantOrderId,
+        payment.providerTransactionId,
+        payment.amount,
+      ),
+      rawPayload: {
+        source: 'helio-mock-demo',
+        paymentId: payment.id,
+      },
+    };
+  }
+
+  /**
    * 下载对账单（Mock）：渠道侧无独立存储，合成「与本地 SUCCESS 流水一致」的
    * 对账单原始行。真实渠道由 WeChat/Alipay 经 API 下载。
    */

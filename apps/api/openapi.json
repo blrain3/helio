@@ -313,6 +313,44 @@
         ]
       }
     },
+    "/devices": {
+      "get": {
+        "operationId": "EnergyController_listUserDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "设备列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询当前用户名下设备",
+        "tags": [
+          "energy"
+        ]
+      },
+      "post": {
+        "operationId": "EnergyController_createDevice",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "创建成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建设备（挂靠在电站下）",
+        "tags": [
+          "energy"
+        ]
+      }
+    },
     "/plants/{plantId}/devices": {
       "get": {
         "operationId": "EnergyController_listDevices",
@@ -384,26 +422,6 @@
           }
         ],
         "summary": "删除设备",
-        "tags": [
-          "energy"
-        ]
-      }
-    },
-    "/devices": {
-      "post": {
-        "operationId": "EnergyController_createDevice",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "创建成功"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "创建设备（挂靠在电站下）",
         "tags": [
           "energy"
         ]
@@ -547,6 +565,44 @@
         ]
       }
     },
+    "/bills": {
+      "get": {
+        "operationId": "BillingController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "账单列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询当前用户账单列表",
+        "tags": [
+          "billing"
+        ]
+      },
+      "post": {
+        "operationId": "BillingController_generate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "账单已生成"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "生成账单（按周期生效费率计算金额）",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/bills/{id}": {
       "get": {
         "operationId": "BillingController_findById",
@@ -587,26 +643,6 @@
         ]
       }
     },
-    "/bills": {
-      "post": {
-        "operationId": "BillingController_generate",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "账单已生成"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "生成账单（按周期生效费率计算金额）",
-        "tags": [
-          "billing"
-        ]
-      }
-    },
     "/bills/{id}/issue": {
       "patch": {
         "operationId": "BillingController_issue",
@@ -627,6 +663,44 @@
         ]
       }
     },
+    "/orders": {
+      "get": {
+        "operationId": "OrderController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "订单列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询当前用户订单列表",
+        "tags": [
+          "order"
+        ]
+      },
+      "post": {
+        "operationId": "OrderController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "订单已创建"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建订单（基于账单，金额校验）",
+        "tags": [
+          "order"
+        ]
+      }
+    },
     "/orders/{id}": {
       "get": {
         "operationId": "OrderController_findById",
@@ -642,26 +716,6 @@
           }
         ],
         "summary": "按 id 查询订单",
-        "tags": [
-          "order"
-        ]
-      }
-    },
-    "/orders": {
-      "post": {
-        "operationId": "OrderController_create",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "订单已创建"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "创建订单（基于账单，金额校验）",
         "tags": [
           "order"
         ]
@@ -748,6 +802,24 @@
       }
     },
     "/payments": {
+      "get": {
+        "operationId": "PaymentController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "支付流水列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询当前用户支付流水",
+        "tags": [
+          "payment"
+        ]
+      },
       "post": {
         "operationId": "PaymentController_create",
         "parameters": [],
@@ -762,6 +834,26 @@
           }
         ],
         "summary": "创建支付（下单）",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/payments/{id}/mock-complete": {
+      "post": {
+        "operationId": "PaymentController_completeMockPayment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Mock 回调已处理"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "开发环境完成 Mock 支付并触发已签名回调",
         "tags": [
           "payment"
         ]
@@ -988,6 +1080,26 @@
           }
         ],
         "summary": "触发即时异常检测",
+        "tags": [
+          "anomaly"
+        ]
+      }
+    },
+    "/anomalies": {
+      "get": {
+        "operationId": "AnomalyController_listUserEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "异常事件列表"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询当前用户异常事件",
         "tags": [
           "anomaly"
         ]

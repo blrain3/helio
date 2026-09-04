@@ -22,6 +22,13 @@ import { OrderEntity } from '../domain/order.entity';
 export class OrderController {
   constructor(private readonly orders: OrderService) {}
 
+  @Get()
+  @ApiOperation({ summary: '查询当前用户订单列表' })
+  @ApiResponse({ status: 200, description: '订单列表' })
+  async list(@CurrentUser() user: AuthUser): Promise<OrderEntity[]> {
+    return this.orders.listByUser(user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '按 id 查询订单' })
   @ApiResponse({ status: 200, description: '订单信息' })

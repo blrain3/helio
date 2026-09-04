@@ -110,6 +110,13 @@ export class AnomalyController {
 
   // ===================== 事件查询（登录用户） =====================
 
+  @Get('anomalies')
+  @ApiOperation({ summary: '查询当前用户异常事件' })
+  @ApiResponse({ status: 200, description: '异常事件列表' })
+  async listUserEvents(@CurrentUser() user: AuthUser): Promise<AnomalyEventEntity[]> {
+    return this.anomaly.listEventsByUser(user.sub);
+  }
+
   @Get('plants/:plantId/anomaly-events')
   @ApiOperation({ summary: '查询电站异常事件' })
   @ApiResponse({ status: 200, description: '异常事件列表' })

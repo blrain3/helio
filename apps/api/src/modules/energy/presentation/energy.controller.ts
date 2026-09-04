@@ -102,6 +102,13 @@ export class EnergyController {
 
   // ===================== 设备 Device =====================
 
+  @Get('devices')
+  @ApiOperation({ summary: '查询当前用户名下设备' })
+  @ApiResponse({ status: 200, description: '设备列表' })
+  async listUserDevices(@CurrentUser() user: AuthUser): Promise<DeviceEntity[]> {
+    return this.devices.listByUser(user.sub);
+  }
+
   @Get('plants/:plantId/devices')
   @ApiOperation({ summary: '查询电站下设备列表' })
   @ApiResponse({ status: 200, description: '设备列表' })

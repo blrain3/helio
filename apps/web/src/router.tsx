@@ -1,5 +1,16 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, redirect, type LoaderFunctionArgs } from 'react-router';
 import { AppShell } from './components/AppShell';
+import { browserSessionStore } from './lib/session';
+
+function requireSession({ request }: LoaderFunctionArgs) {
+  if (browserSessionStore.getSession()) {
+    return null;
+  }
+
+  const url = new URL(request.url);
+  const redirectTo = `${url.pathname}${url.search}`;
+  throw redirect(`/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`);
+}
 
 /**
  * 路由配置：业务页面挂载在 AppShell（含侧边导航）下，
@@ -12,6 +23,7 @@ export const router = createBrowserRouter([
   },
   {
     element: <AppShell />,
+    loader: requireSession,
     children: [
       {
         path: '/',
