@@ -112,4 +112,75 @@ describe('OrdersPage', () => {
     await waitFor(() => expect(closeOrder).toHaveBeenCalledWith('order-created'));
     await waitFor(() => expect(completeOrder).toHaveBeenCalledWith('order-paid'));
   });
+
+  it('disables every order mutation control while a transition is pending', async () => {
+    vi.spyOn(api, 'listBills').mockResolvedValue([
+      {
+        id: 'bill-1',
+        plantId: 'plant-1',
+        period: '2026-09',
+        amount: 24480,
+        energyKwh: 680,
+        status: 'ISSUED',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+    ]);
+    vi.spyOn(api, 'listOrders').mockResolvedValue([
+      {
+        id: 'order-created',
+        billId: 'bill-1',
+        amount: 24480,
+        status: 'CREATED',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 'order-pending',
+        billId: 'bill-2',
+        amount: 12800,
+        status: 'PENDING_PAYMENT',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 'order-paid',
+        billId: 'bill-3',
+        amount: 9800,
+        status: 'PAID',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+    ]);
+    let resolveSubmission!: (value: Awaited<ReturnType<typeof api.submitOrderPayment>>) => void;
+    const pendingSubmission = new Promise<Awaited<ReturnType<typeof api.submitOrderPayment>>>((resolve) => {
+      resolveSubmission = resolve;
+    });
+    const submitPayment = vi.spyOn(api, 'submitOrderPayment').mockReturnValue(pendingSubmission);
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrdersPage />
+      </QueryClientProvider>,
+    );
+
+    const submitButton = await screen.findByRole('button', { name: '提交支付 order-created' });
+    await user.click(submitButton);
+    await waitFor(() => expect(submitPayment).toHaveBeenCalledWith('order-created'));
+
+    expect((screen.getByRole('button', { name: '新建订单' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((submitButton as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '关闭订单 order-created' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '关闭订单 order-pending' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '完成订单 order-paid' }) as HTMLButtonElement).disabled).toBe(true);
+
+    resolveSubmission({
+      id: 'order-created',
+      billId: 'bill-1',
+      amount: 24480,
+      status: 'PENDING_PAYMENT',
+      createdAt: '2026-09-04T00:00:00.000Z',
+    });
+    await waitFor(() => expect((submitButton as HTMLButtonElement).disabled).toBe(false));
+  });
 });

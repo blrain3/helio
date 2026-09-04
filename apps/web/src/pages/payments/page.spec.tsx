@@ -85,6 +85,69 @@ describe('PaymentsPage', () => {
     expect(screen.getByRole('status').textContent).toContain('模拟支付回调已处理');
   });
 
+  it('keeps local payment controls Mock-only', async () => {
+    vi.spyOn(api, 'listOrders').mockResolvedValue([]);
+    vi.spyOn(api, 'listPayments').mockResolvedValue([
+      {
+        id: 'mock-pending',
+        orderId: 'order-1',
+        provider: 'mock',
+        providerTransactionId: 'MOCK-1',
+        amount: 24480,
+        refundedAmount: 0,
+        status: 'PENDING',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 'mock-success',
+        orderId: 'order-2',
+        provider: 'mock',
+        providerTransactionId: 'MOCK-2',
+        amount: 24480,
+        refundedAmount: 0,
+        status: 'SUCCESS',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 'wechat-pending',
+        orderId: 'order-3',
+        provider: 'wechat',
+        providerTransactionId: 'WX-1',
+        amount: 24480,
+        refundedAmount: 0,
+        status: 'PENDING',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+      {
+        id: 'alipay-success',
+        orderId: 'order-4',
+        provider: 'alipay',
+        providerTransactionId: 'ALI-1',
+        amount: 24480,
+        refundedAmount: 0,
+        status: 'SUCCESS',
+        createdAt: '2026-09-04T00:00:00.000Z',
+      },
+    ]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PaymentsPage />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole('button', { name: '完成模拟支付 mock-pending' });
+
+    expect(screen.getByRole('button', { name: '关闭支付 mock-pending' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '退款 mock-success' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '完成模拟支付 wechat-pending' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '关闭支付 wechat-pending' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '退款 alipay-success' })).toBeNull();
+  });
+
   it('requires confirmation before closing a pending payment', async () => {
     vi.spyOn(api, 'listOrders').mockResolvedValue([]);
     vi.spyOn(api, 'listPayments').mockResolvedValue([
