@@ -414,6 +414,72 @@ describe('authenticated API client', () => {
       refreshToken: 'new-login-refresh-token',
     });
   });
+
+  it('does not replay a stale mutation with a replacement session token', async () => {
+    const sessions = createSessionStore(new MemoryStorage(), () => 'browser-device-1');
+    sessions.saveSession({
+      accessToken: 'session-a-access-token',
+      refreshToken: 'session-a-refresh-token',
+      deviceId: 'browser-device-1',
+    });
+    const refresh = deferred<Response>();
+    let mutationRequests = 0;
+    const fetch = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/orders/order-1/close')) {
+        mutationRequests += 1;
+        if (mutationRequests === 1) {
+          return Promise.resolve(unauthorizedResponse());
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ status: 'CLOSED' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
+      }
+      if (url.endsWith('/auth/refresh')) {
+        return refresh.promise;
+      }
+      throw new Error(`unexpected request: ${url}`);
+    });
+    const client = createAuthenticatedClient({
+      baseUrl: 'https://api.helio.test',
+      fetch,
+      sessions,
+    });
+
+    const request = client.request('/orders/order-1/close', { method: 'PATCH' });
+    await nextTurn();
+    sessions.saveSession({
+      accessToken: 'session-b-access-token',
+      refreshToken: 'session-b-refresh-token',
+      deviceId: 'browser-device-1',
+    });
+    refresh.resolve(
+      new Response(
+        JSON.stringify({
+          tokens: {
+            accessToken: 'session-a-rotated-access-token',
+            refreshToken: 'session-a-rotated-refresh-token',
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
+    );
+
+    await expect(request).rejects.toMatchObject({ status: 401 });
+    expect(mutationRequests).toBe(1);
+    expect(fetch.mock.calls).toHaveLength(2);
+    expect(sessions.getSession()).toMatchObject({
+      accessToken: 'session-b-access-token',
+      refreshToken: 'session-b-refresh-token',
+    });
+  });
 });
 
 function unauthorizedResponse(): Response {
