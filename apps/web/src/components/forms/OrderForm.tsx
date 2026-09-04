@@ -6,11 +6,12 @@ import { Button } from '../button';
 interface OrderFormProps {
   bills: Bill[];
   isSubmitting?: boolean;
+  isSubmitDisabled?: boolean;
   onSubmit: (values: { billId: string; amount: number }) => void | Promise<void>;
   onCancel: () => void;
 }
 
-export function OrderForm({ bills, isSubmitting = false, onSubmit, onCancel }: OrderFormProps) {
+export function OrderForm({ bills, isSubmitting = false, isSubmitDisabled = false, onSubmit, onCancel }: OrderFormProps) {
   const [billId, setBillId] = useState('');
   const bill = bills.find((candidate) => candidate.id === billId);
 
@@ -54,7 +55,7 @@ export function OrderForm({ bills, isSubmitting = false, onSubmit, onCancel }: O
         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           取消
         </Button>
-        <Button type="submit" disabled={isSubmitting || !bill}>
+        <Button type="submit" disabled={isSubmitting || isSubmitDisabled || !bill}>
           {isSubmitting ? '创建中...' : '创建订单'}
         </Button>
       </div>
