@@ -30,6 +30,10 @@ coverage/
 .nyc_output/
 .pytest_cache/
 
+# Local browser automation artifacts
+/.playwright-cli/
+/output/playwright/
+
 # Python
 __pycache__/
 *.pyc

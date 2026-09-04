@@ -109,6 +109,7 @@ describe('createApi', () => {
               provider: 'mock',
               providerTransactionId: 'MOCK-1',
               amount: 1250,
+              refundedAmount: 0,
               status: 'PENDING',
               createdAt: '2026-09-01T02:00:00.000Z',
             },
@@ -172,6 +173,37 @@ describe('createApi', () => {
       queryKeys.bills,
     ]);
   });
+
+  it('loads daily energy data for the selected plant and date range', async () => {
+    const requestedPaths: string[] = [];
+    const api = createApi({
+      request: async <T>(path: string): Promise<T> => {
+        requestedPaths.push(path);
+        return [
+          {
+            day: '2026-09-01T00:00:00.000Z',
+            totalKwh: 18.5,
+            recordCount: 2,
+          },
+        ] as T;
+      },
+    });
+
+    await expect(
+      api.listDailyEnergy('plant-1', '2026-09-01T00:00:00.000Z', '2026-09-07T23:59:59.999Z'),
+    ).resolves.toEqual([
+      {
+        day: '2026-09-01T00:00:00.000Z',
+        totalKwh: 18.5,
+        recordCount: 2,
+      },
+    ]);
+
+    expect(requestedPaths).toEqual([
+      '/plants/plant-1/energy/daily?start=2026-09-01T00%3A00%3A00.000Z&end=2026-09-07T23%3A59%3A59.999Z',
+    ]);
+  });
+
 });
 
 describe('authenticated API client', () => {
