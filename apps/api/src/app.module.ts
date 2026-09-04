@@ -14,6 +14,7 @@ import { AnomalyModule } from './modules/anomaly/anomaly.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { HealthController } from './common/health/health.controller';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     // M5b：异常检测引擎
     AnomalyModule,
   ],
+  controllers: [HealthController],
   providers: [
     // 全局守卫：先鉴权（JWT），后授权（RBAC）。
     { provide: APP_GUARD, useClass: JwtAuthGuard },
