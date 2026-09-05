@@ -7,6 +7,7 @@ import {
   ConflictError,
   ForbiddenError,
 } from '../../auth/domain/errors';
+import { AuthUser } from '../../auth/domain/user.entity';
 
 /**
  * 设备应用服务：设备的创建、查询、更新与删除。
@@ -22,7 +23,13 @@ export class DeviceService {
     private readonly plants: PlantRepository,
   ) {}
 
-  async findById(id: string): Promise<DeviceEntity> {
+  async findById(id: string, user: AuthUser): Promise<DeviceEntity> {
+    const device = await this.getById(id);
+    await this.assertOwnable(device.plantId, user.sub);
+    return device;
+  }
+
+  private async getById(id: string): Promise<DeviceEntity> {
     const device = await this.devices.findById(id);
     if (!device) {
       throw new NotFoundError('设备不存在');
@@ -30,7 +37,8 @@ export class DeviceService {
     return device;
   }
 
-  async listByPlant(plantId: string): Promise<DeviceEntity[]> {
+  async listByPlant(plantId: string, user: AuthUser): Promise<DeviceEntity[]> {
+    await this.assertOwnable(plantId, user.sub);
     return this.devices.findByPlantId(plantId);
   }
 
@@ -67,7 +75,7 @@ export class DeviceService {
     userId: string,
     input: { name?: string; type?: DeviceType },
   ): Promise<DeviceEntity> {
-    const device = await this.findById(id);
+    const device = await this.getById(id);
     await this.assertOwnable(device.plantId, userId);
     const updated = await this.devices.update(id, input);
     if (!updated) {
@@ -77,7 +85,7 @@ export class DeviceService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const device = await this.findById(id);
+    const device = await this.getById(id);
     await this.assertOwnable(device.plantId, userId);
     await this.devices.remove(id);
   }

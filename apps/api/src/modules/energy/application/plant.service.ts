@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PlantRepository } from '../infrastructure/plant.repository';
 import { PlantEntity } from '../domain/energy.entity';
 import { NotFoundError, ForbiddenError } from '../../auth/domain/errors';
+import { AuthUser } from '../../auth/domain/user.entity';
 
 /**
  * 电站应用服务：电站的创建、查询、更新与删除。
@@ -11,7 +12,13 @@ import { NotFoundError, ForbiddenError } from '../../auth/domain/errors';
 export class PlantService {
   constructor(private readonly plants: PlantRepository) {}
 
-  async findById(id: string): Promise<PlantEntity> {
+  async findById(id: string, user: AuthUser): Promise<PlantEntity> {
+    const plant = await this.getById(id);
+    this.assertOwner(plant, user.sub);
+    return plant;
+  }
+
+  private async getById(id: string): Promise<PlantEntity> {
     const plant = await this.plants.findById(id);
     if (!plant) {
       throw new NotFoundError('电站不存在');
@@ -42,7 +49,7 @@ export class PlantService {
     userId: string,
     input: { name?: string; capacity?: number; location?: string },
   ): Promise<PlantEntity> {
-    const plant = await this.findById(id);
+    const plant = await this.getById(id);
     this.assertOwner(plant, userId);
     const updated = await this.plants.update(id, input);
     // update 在 id 存在前提下必返回实体，防御性兜底。
@@ -53,7 +60,7 @@ export class PlantService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const plant = await this.findById(id);
+    const plant = await this.getById(id);
     this.assertOwner(plant, userId);
     await this.plants.remove(id);
   }

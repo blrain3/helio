@@ -670,7 +670,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 内部触发日对账（worker 定时调用，x-internal-token 校验） */
+        /** 内部触发日对账（worker 定时调用，HMAC 请求签名校验） */
         post: operations["PaymentController_reconcileInternal"];
         delete?: never;
         options?: never;

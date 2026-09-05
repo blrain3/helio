@@ -30,15 +30,21 @@ export class BillingController {
   @Get(':id')
   @ApiOperation({ summary: '按 id 查询账单' })
   @ApiResponse({ status: 200, description: '账单信息' })
-  async findById(@Param('id') id: string): Promise<BillEntity> {
-    return this.billing.findById(id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<BillEntity> {
+    return this.billing.findById(id, user);
   }
 
   @Get('plant/:plantId')
   @ApiOperation({ summary: '查询电站账单列表' })
   @ApiResponse({ status: 200, description: '账单列表' })
-  async listByPlant(@Param('plantId') plantId: string): Promise<BillEntity[]> {
-    return this.billing.listByPlant(plantId);
+  async listByPlant(
+    @Param('plantId') plantId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<BillEntity[]> {
+    return this.billing.listByPlant(plantId, user);
   }
 
   @Post()

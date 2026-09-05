@@ -2,14 +2,15 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { FastifyRequest } from 'fastify';
 import { PaymentService } from '../application/payment.service';
 import { ReconciliationService } from '../application/reconciliation.service';
 import { MockPaymentService } from '../application/mock-payment.service';
@@ -20,9 +21,11 @@ import {
 } from '../application/dto/payment.dto';
 import { Public } from '../../../common/decorators/public.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { InternalRequestService } from '../../../common/security/internal-request.service';
 import { PaymentEntity, RefundEntity } from '../domain/payment.entity';
 import { AuthUser } from '../../auth/domain/user.entity';
-import { ForbiddenError, UnauthorizedError } from '../../auth/domain/errors';
+import { ForbiddenError } from '../../auth/domain/errors';
 
 /**
  * 支付控制器：支付创建、回调、退款、对账。
@@ -35,6 +38,7 @@ export class PaymentController {
     private readonly payments: PaymentService,
     private readonly reconciliation: ReconciliationService,
     private readonly mockPayments: MockPaymentService,
+    private readonly internalRequests: InternalRequestService,
   ) {}
 
   @Get()
@@ -42,18 +46,22 @@ export class PaymentController {
   @ApiOperation({ summary: '查询当前用户支付流水' })
   @ApiResponse({ status: 200, description: '支付流水列表' })
   async list(@CurrentUser() user: AuthUser): Promise<PaymentEntity[]> {
-    return this.payments.listByUser(user.sub);
+    return this.payments.listByUser(user);
   }
 
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: '创建支付（下单）' })
   @ApiResponse({ status: 201, description: '支付已创建' })
-  async create(@Body() dto: CreatePaymentDto): Promise<PaymentEntity> {
+  async create(
+    @Body() dto: CreatePaymentDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<PaymentEntity> {
     return this.payments.createPayment(
       dto.orderId,
       dto.provider ?? 'mock',
       dto.notifyUrl ?? '',
+      user,
     );
   }
 
@@ -94,16 +102,22 @@ export class PaymentController {
   @ApiBearerAuth()
   @ApiOperation({ summary: '查询支付流水' })
   @ApiResponse({ status: 200, description: '支付流水信息' })
-  async findById(@Param('id') id: string): Promise<PaymentEntity> {
-    return this.payments.findById(id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<PaymentEntity> {
+    return this.payments.findById(id, user);
   }
 
   @Patch(':id/close')
   @ApiBearerAuth()
   @ApiOperation({ summary: '关闭支付' })
   @ApiResponse({ status: 200, description: '支付已关闭' })
-  async close(@Param('id') id: string): Promise<PaymentEntity> {
-    return this.payments.closePayment(id);
+  async close(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<PaymentEntity> {
+    return this.payments.closePayment(id, user);
   }
 
   @Post(':id/refund')
@@ -113,14 +127,16 @@ export class PaymentController {
   async refund(
     @Param('id') id: string,
     @Body() dto: RefundDto,
+    @CurrentUser() user: AuthUser,
   ): Promise<RefundEntity> {
     const refundNo = `RFN${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    return this.payments.refund(id, dto.amount, refundNo);
+    return this.payments.refund(id, dto.amount, refundNo, user);
   }
 
   @Post('reconcile/daily')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
+  @Roles('OPERATOR', 'ADMIN')
   @ApiOperation({ summary: '执行日对账' })
   @ApiResponse({ status: 200, description: '对账结果' })
   async reconcile(@Body() body: { date: string }): Promise<{
@@ -134,20 +150,22 @@ export class PaymentController {
   @Post('reconcile/daily/internal')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '内部触发日对账（worker 定时调用，x-internal-token 校验）' })
+  @ApiOperation({ summary: '内部触发日对账（worker 定时调用，HMAC 请求签名校验）' })
   @ApiResponse({ status: 200, description: '对账结果' })
   async reconcileInternal(
-    @Headers('x-internal-token') token: string,
+    @Req() request: FastifyRequest,
     @Body() body: { date: string },
   ): Promise<{
     total: number;
     matched: number;
     discrepancies: unknown[];
   }> {
-    const expected = process.env.RECONCILE_INTERNAL_TOKEN ?? 'helio-internal';
-    if (token !== expected) {
-      throw new UnauthorizedError('内部令牌无效');
-    }
+    await this.internalRequests.assertInternalRequest({
+      headers: request.headers,
+      method: request.method,
+      path: new URL(request.url, 'http://helio.internal').pathname,
+      body,
+    });
     return this.reconciliation.reconcile(new Date(body.date));
   }
 
@@ -156,7 +174,10 @@ export class PaymentController {
   @ApiBearerAuth()
   @ApiOperation({ summary: '解决对账差异（PENDING → RESOLVED，解锁冻结退款）' })
   @ApiResponse({ status: 200, description: '差异已解决' })
-  async resolveDiff(@Param('id') id: string): Promise<{ id: string; status: string }> {
-    return this.reconciliation.resolveDiff(id);
+  async resolveDiff(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<{ id: string; status: string }> {
+    return this.reconciliation.resolveDiff(id, user);
   }
 }

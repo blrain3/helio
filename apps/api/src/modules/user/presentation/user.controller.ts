@@ -15,8 +15,9 @@ import { AuthService } from '../../auth/application/auth.service';
 import { UpdateUserRoleDto } from '../application/dto/user.dto';
 import { AdminCreateUserDto } from '../../auth/application/dto/auth.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Role } from '../../auth/domain/role.enum';
-import { UserEntity } from '../../auth/domain/user.entity';
+import { AuthUser, UserEntity } from '../../auth/domain/user.entity';
 
 @ApiTags('user')
 @ApiBearerAuth()
@@ -30,8 +31,11 @@ export class UserController {
   @Get(':id')
   @ApiOperation({ summary: '按 id 查询用户' })
   @ApiResponse({ status: 200, type: Object, description: '用户信息' })
-  async findById(@Param('id') id: string): Promise<UserEntity> {
-    return this.users.findById(id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<UserEntity> {
+    return this.users.findById(id, user);
   }
 
   @Post()

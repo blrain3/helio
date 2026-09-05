@@ -23,8 +23,7 @@ export class MockPaymentService {
       throw new ForbiddenError('Mock 支付演示仅在开发环境且 Mock 渠道启用时可用');
     }
 
-    const payment = await this.payments.findById(paymentId);
-    await this.orders.assertOwnedByUser(payment.orderId, user.sub);
+    const payment = await this.payments.findById(paymentId, user);
     if (payment.provider !== 'mock') {
       throw new ValidationError('仅 Mock 支付流水可触发演示回调');
     }
