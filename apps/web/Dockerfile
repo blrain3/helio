@@ -5,7 +5,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN pnpm --filter @helio/web build
+RUN pnpm turbo run build --filter=@helio/web...
 
 FROM nginx:1.27-alpine AS runner
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

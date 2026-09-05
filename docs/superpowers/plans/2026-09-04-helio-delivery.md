@@ -340,7 +340,7 @@ Validation note (2026-09-05): API integration starts compiled API and worker pro
 **Interfaces:**
 - Produces: startup instructions, Swagger URL, screenshot/video workflow and deploy instructions using the verified Compose stack.
 
-- [ ] **Step 1: Capture fresh evidence after all functional gates pass**
+- [x] **Step 1: Capture fresh evidence after all functional gates pass**
 
 Run the Web against the authenticated API stack, capture desktop/mobile dashboard and Mock payment completion screenshots, and record the exact browser recording command in `docs/DEMO.md`.
 
@@ -352,13 +352,15 @@ Replace prototype claims with verified capabilities, report exact current test t
 
 Commit Compose-based deployment instructions and an optional GitHub Actions image/deploy workflow that activates only when real registry/hosting secrets exist. Do not add fake credentials or placeholder public URLs.
 
-- [ ] **Step 4: Verify documentation and evidence links**
+- [x] **Step 4: Verify documentation and evidence links**
 
 Run: `git check-ignore -v docs/README.md; rg -n "95|TODO|TBD|未完成" README.md docs --glob '!docs/superpowers/**'; docker compose config --quiet`
 
 Expected: docs are not ignored, obsolete test counts are absent, and Compose configuration is valid.
 
-- [ ] **Step 5: Commit and push**
+Validation note (2026-09-05): the fresh Compose stack built and started API, worker, Web, PostgreSQL, and Redis with all services healthy. `/api/health`, `/api/health/ready`, and the Web root returned successfully. Browser evidence covers the completed local Mock-payment flow on desktop and at a 390px mobile viewport; screenshots are tracked under `docs/assets/`.
+
+- [x] **Step 5: Commit and push**
 
 Run: `git add README.md docs .github docker-compose.yml && git commit -m "docs: publish project delivery evidence" && git push`
 

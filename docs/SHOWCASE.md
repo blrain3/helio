@@ -10,14 +10,20 @@
 
 公开部署需要授权的托管与 DNS/镜像仓库凭据。当前没有可核验的公网端点，因此本文件不提供占位链接。
 
-## 截图与视频复现
+## 已验证截图
 
-运行 [DEMO.md](DEMO.md) 中的 Compose 与 Playwright 命令后，将真实浏览器产物保存为以下路径：
+以下截图于 2026-09-05 在本地 Compose 栈中采集。演示链路为：登录、创建电站、生成并发出账单、创建订单、提交支付、完成 Mock 回调，以及 worker 结算为 `COMPLETED`。
 
-| 场景 | 路径 |
-| --- | --- |
-| 桌面控制台 | `docs/assets/dashboard-desktop.png` |
-| 移动控制台 | `docs/assets/dashboard-mobile.png` |
-| Mock 支付结算 | `docs/assets/payment-completed.png` |
+### 桌面控制台
 
-本次交付环境的 Docker 引擎不可用，因而没有提交无法核验的截图或视频。Docker 恢复后，按演示流程生成上述文件，再将链接加入本页。
+![已创建电站与账单的桌面运营看板](assets/dashboard-desktop.png)
+
+### 移动控制台
+
+![390px 视口下的移动运营看板](assets/dashboard-mobile.png)
+
+### Mock 支付结算
+
+![Mock 支付回调处理完成且支付成功](assets/payment-completed.png)
+
+视频可按 [DEMO.md](DEMO.md) 中的 Playwright 录制命令复现。所有支付截图仅反映本地 Mock 渠道，不表示已接入真实微信或支付宝结算。
