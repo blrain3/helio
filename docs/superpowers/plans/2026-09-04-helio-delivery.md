@@ -344,17 +344,17 @@ Validation note (2026-09-05): API integration starts compiled API and worker pro
 
 Run the Web against the authenticated API stack, capture desktop/mobile dashboard and Mock payment completion screenshots, and record the exact browser recording command in `docs/DEMO.md`.
 
-- [ ] **Step 2: Update project documentation**
+- [x] **Step 2: Update project documentation**
 
 Replace prototype claims with verified capabilities, report exact current test totals, state Mock-payment scope, link Swagger at `/api/docs`, and document `docker compose up --build` plus health checks.
 
-- [ ] **Step 3: Add deployment configuration**
+- [x] **Step 3: Add deployment configuration**
 
 Commit Compose-based deployment instructions and an optional GitHub Actions image/deploy workflow that activates only when real registry/hosting secrets exist. Do not add fake credentials or placeholder public URLs.
 
 - [ ] **Step 4: Verify documentation and evidence links**
 
-Run: `git check-ignore -v docs/README.md; rg -n "95|TODO|TBD|未完成" README.md docs; docker compose config --quiet`
+Run: `git check-ignore -v docs/README.md; rg -n "95|TODO|TBD|未完成" README.md docs --glob '!docs/superpowers/**'; docker compose config --quiet`
 
 Expected: docs are not ignored, obsolete test counts are absent, and Compose configuration is valid.
 

@@ -30,6 +30,9 @@ foreach ($serviceName in @('postgres', 'redis', 'api', 'worker', 'web')) {
 $apiEnvironment = Get-ServiceEnvironment $compose.services.api
 $workerEnvironment = Get-ServiceEnvironment $compose.services.worker
 
+Assert-Condition ($apiEnvironment.NODE_ENV -ne 'production') 'default Compose API runtime must permit the local Mock-payment demo'
+Assert-Condition ($apiEnvironment.MOCK_PAYMENT_DEMO_ENABLED -eq 'true') 'default Compose API runtime must enable the controlled Mock-payment demo'
+
 foreach ($environment in @($apiEnvironment, $workerEnvironment)) {
   Assert-Condition ($environment.DATABASE_URL -match '@postgres:5432/') 'DATABASE_URL must use the postgres service host'
   Assert-Condition ($environment.REDIS_HOST -eq 'redis') 'REDIS_HOST must use the redis service host'
