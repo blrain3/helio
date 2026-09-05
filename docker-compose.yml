@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: helio-postgres
     environment:
       POSTGRES_USER: helio
       POSTGRES_PASSWORD: helio
@@ -18,7 +17,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: helio-redis
     ports:
       - "6379:6379"
     volumes:
@@ -33,9 +31,8 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: helio-api
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
       DATABASE_URL: postgresql://helio:helio@postgres:5432/helio
       REDIS_URL: redis://redis:6379
@@ -46,6 +43,7 @@ services:
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      MOCK_PAYMENT_DEMO_ENABLED: ${MOCK_PAYMENT_DEMO_ENABLED:-true}
       PAYMENT_SHADOW: ${PAYMENT_SHADOW:-false}
       PAYMENT_TIMEOUT_MS: ${PAYMENT_TIMEOUT_MS:-1800000}
       INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_SECRET:-helio-local-internal-request-secret}
@@ -70,7 +68,6 @@ services:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
-    container_name: helio-worker
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://helio:helio@postgres:5432/helio
@@ -99,7 +96,6 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_BASE_URL: /api
-    container_name: helio-web
     ports:
       - "8080:80"
     depends_on:

@@ -25,10 +25,14 @@ $compose = ($rendered -join "`n") | ConvertFrom-Json -AsHashtable
 
 foreach ($serviceName in @('postgres', 'redis', 'api', 'worker', 'web')) {
   Assert-Condition $compose.services.ContainsKey($serviceName) "missing '$serviceName' service"
+  Assert-Condition (-not $compose.services[$serviceName].ContainsKey('container_name')) "'$serviceName' must not use a global container_name"
 }
 
 $apiEnvironment = Get-ServiceEnvironment $compose.services.api
 $workerEnvironment = Get-ServiceEnvironment $compose.services.worker
+
+Assert-Condition ($apiEnvironment.NODE_ENV -ne 'production') 'default Compose API runtime must permit the local Mock-payment demo'
+Assert-Condition ($apiEnvironment.MOCK_PAYMENT_DEMO_ENABLED -eq 'true') 'default Compose API runtime must enable the controlled Mock-payment demo'
 
 foreach ($environment in @($apiEnvironment, $workerEnvironment)) {
   Assert-Condition ($environment.DATABASE_URL -match '@postgres:5432/') 'DATABASE_URL must use the postgres service host'
