@@ -69,3 +69,36 @@ curl -fsS https://<web-host>/
 ```
 
 只有四个端点均可访问后，才将实际 URL 写入 README 和 `docs/SHOWCASE.md`。
+
+## VPS + Caddy
+
+生产部署使用 `docker-compose.production.yml` 覆盖本地 Compose。该覆盖文件不发布 PostgreSQL、Redis 或 API 端口；Web 仅监听 VPS 的 `127.0.0.1:8080`，由 Caddy 提供唯一的公网 HTTPS 入口。需要 Docker Compose v2.24 或更高版本以支持 `!reset` 和 `!override` 端口覆盖。
+
+在 VPS 的仓库目录执行：
+
+```bash
+git fetch origin codex/helio-delivery
+git checkout -B codex/helio-delivery origin/codex/helio-delivery
+cp .env.production.example .env.production
+chmod 600 .env.production
+```
+
+编辑 `.env.production`，用 `openssl rand -hex 32` 为 `POSTGRES_PASSWORD`、`JWT_ACCESS_SECRET`、`JWT_REFRESH_SECRET` 和 `INTERNAL_REQUEST_SECRET` 生成互不复用的值，并把两个 URL 改为实际 HTTPS 域名。示例文件中的值不能用于生产环境。
+
+启动并仅在 VPS 本机验证：
+
+```bash
+sudo docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up --build -d
+sudo docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml ps
+curl -fsS http://127.0.0.1:8080/api/health/ready
+```
+
+将 `deploy/Caddyfile.example` 的域名替换为真实域名后安装为 `/etc/caddy/Caddyfile`，再执行：
+
+```bash
+sudo systemctl reload caddy
+curl -fsS https://<domain>/api/health/ready
+curl -fsS https://<domain>/api/docs
+```
+
+Cloudflare DNS 的 A 记录需要先指向 VPS。首次签发证书时使用 DNS only；确认 Caddy 已获得证书后，可启用代理并将 Cloudflare SSL/TLS 模式设为 Full (strict)。防火墙与云安全组仅放行 SSH、HTTP 和 HTTPS。

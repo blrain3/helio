@@ -45,6 +45,28 @@ Assert-Condition ($null -ne $compose.services.web.ports) 'web service must publi
 Assert-Condition ($null -ne $compose.services.api.healthcheck) 'api service must define a health check'
 Assert-Condition ($null -ne $compose.services.web.healthcheck) 'web service must define a health check'
 
+$productionRendered = & docker compose --env-file .env.production.example -f docker-compose.yml -f docker-compose.production.yml config --format json 2>&1
+Assert-Condition ($LASTEXITCODE -eq 0) "production Compose config failed: $($productionRendered -join "`n")"
+$production = ($productionRendered -join "`n") | ConvertFrom-Json -AsHashtable
+
+foreach ($serviceName in @('postgres', 'redis', 'api')) {
+  Assert-Condition (-not $production.services[$serviceName].ContainsKey('ports')) "production '$serviceName' must not publish a host port"
+}
+
+$productionPostgres = $production.services.postgres.environment
+$productionApi = $production.services.api.environment
+$productionWorker = $production.services.worker.environment
+$productionWebPorts = @($production.services.web.ports)
+
+Assert-Condition ($productionPostgres.POSTGRES_PASSWORD -eq 'production-db-password') 'production database password must come from the production environment file'
+Assert-Condition ($productionApi.DATABASE_URL -match 'production-db-password') 'production API DATABASE_URL must use the configured database password'
+Assert-Condition ($productionWorker.DATABASE_URL -match 'production-db-password') 'production worker DATABASE_URL must use the configured database password'
+Assert-Condition ($productionApi.NODE_ENV -eq 'production') 'production API must run with NODE_ENV=production'
+Assert-Condition ($productionApi.MOCK_PAYMENT_DEMO_ENABLED -eq 'false') 'production API must disable Mock-payment completion'
+Assert-Condition ($productionWebPorts.Count -eq 1) 'production web must publish exactly one host port'
+Assert-Condition ($productionWebPorts[0].host_ip -eq '127.0.0.1') 'production web must bind to loopback only'
+Assert-Condition ($productionWebPorts[0].published -eq '8080') 'production web must publish port 8080 for the local reverse proxy'
+
 $migrationFiles = Get-ChildItem 'apps/api/prisma/migrations' -Directory |
   ForEach-Object { Join-Path $_.FullName 'migration.sql' } |
   Where-Object { Test-Path $_ }

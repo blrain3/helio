@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: helio
-      POSTGRES_PASSWORD: helio
-      POSTGRES_DB: helio
+      POSTGRES_USER: ${POSTGRES_USER:-helio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helio}
+      POSTGRES_DB: ${POSTGRES_DB:-helio}
     ports:
       - "5432:5432"
     volumes:
       - helio_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U helio"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helio}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,7 +34,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
-      DATABASE_URL: postgresql://helio:helio@postgres:5432/helio
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-helio}:${POSTGRES_PASSWORD:-helio}@postgres:5432/${POSTGRES_DB:-helio}"
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -70,7 +70,7 @@ services:
       dockerfile: apps/worker/Dockerfile
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://helio:helio@postgres:5432/helio
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-helio}:${POSTGRES_PASSWORD:-helio}@postgres:5432/${POSTGRES_DB:-helio}"
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
