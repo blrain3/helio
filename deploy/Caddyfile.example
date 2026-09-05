@@ -1,5 +1,0 @@
-# Replace helio.example.com with the DNS name pointing at the VPS.
-helio.example.com {
-  encode zstd gzip
-  reverse_proxy 127.0.0.1:8080
-}
