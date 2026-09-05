@@ -123,7 +123,7 @@ function defaultDeviceId(): string {
 }
 
 function browserStorage(): StorageLike {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.localStorage) {
     return window.localStorage;
   }
   return new InMemoryStorage();

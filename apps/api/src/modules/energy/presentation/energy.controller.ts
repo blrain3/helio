@@ -64,8 +64,11 @@ export class EnergyController {
   @Get('plants/:id')
   @ApiOperation({ summary: '按 id 查询电站' })
   @ApiResponse({ status: 200, description: '电站信息' })
-  async getPlant(@Param('id') id: string): Promise<PlantEntity> {
-    return this.plants.findById(id);
+  async getPlant(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<PlantEntity> {
+    return this.plants.findById(id, user);
   }
 
   @Post('plants')
@@ -112,15 +115,21 @@ export class EnergyController {
   @Get('plants/:plantId/devices')
   @ApiOperation({ summary: '查询电站下设备列表' })
   @ApiResponse({ status: 200, description: '设备列表' })
-  async listDevices(@Param('plantId') plantId: string): Promise<DeviceEntity[]> {
-    return this.devices.listByPlant(plantId);
+  async listDevices(
+    @Param('plantId') plantId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<DeviceEntity[]> {
+    return this.devices.listByPlant(plantId, user);
   }
 
   @Get('devices/:id')
   @ApiOperation({ summary: '按 id 查询设备' })
   @ApiResponse({ status: 200, description: '设备信息' })
-  async getDevice(@Param('id') id: string): Promise<DeviceEntity> {
-    return this.devices.findById(id);
+  async getDevice(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<DeviceEntity> {
+    return this.devices.findById(id, user);
   }
 
   @Post('devices')

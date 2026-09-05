@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { UserRepository } from '../infrastructure/user.repository';
-import { UserEntity } from '../../auth/domain/user.entity';
+import { AuthUser, UserEntity } from '../../auth/domain/user.entity';
 import { Role } from '../../auth/domain/role.enum';
-import { NotFoundError } from '../../auth/domain/errors';
+import { ForbiddenError, NotFoundError } from '../../auth/domain/errors';
 
 /**
  * 用户管理应用服务：面向管理端的用户查询、角色调整与删除。
@@ -12,12 +12,15 @@ import { NotFoundError } from '../../auth/domain/errors';
 export class UserService {
   constructor(private readonly users: UserRepository) {}
 
-  async findById(id: string): Promise<UserEntity> {
-    const user = await this.users.findById(id);
-    if (!user) {
+  async findById(id: string, user: AuthUser): Promise<UserEntity> {
+    if (id !== user.sub && user.role !== Role.ADMIN) {
+      throw new ForbiddenError('无权查询该用户');
+    }
+    const found = await this.users.findById(id);
+    if (!found) {
       throw new NotFoundError('用户不存在');
     }
-    return user;
+    return found;
   }
 
   async findByEmail(email: string): Promise<UserEntity> {

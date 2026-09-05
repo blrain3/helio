@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { createHash, createHmac, randomBytes } from 'crypto';
 
 /**
  * 每日对账任务处理器（DailyReconciliation 消费者）。
@@ -7,24 +8,59 @@ import { PrismaClient } from '@prisma/client';
  * 对账匹配逻辑与渠道对账单下载由 api 的 ReconciliationService 提供，
  * 本 worker 仅作「定时触发 + HTTP 调用」（进程解耦），避免跨包引用 Nest DI。
  *
- * 调用 api 的内部对账端点，凭 x-internal-token（RECONCILE_INTERNAL_TOKEN）鉴权。
+ * 调用 API 的内部对账端点，以短时 HMAC 签名和 nonce 鉴权。
  */
+export function createInternalRequestHeaders(input: {
+  method: string;
+  path: string;
+  body: string;
+  secret: string;
+  timestamp?: string;
+  nonce?: string;
+}): Record<string, string> {
+  const timestamp = input.timestamp ?? String(Date.now());
+  const nonce = input.nonce ?? randomBytes(16).toString('hex');
+  const bodyHash = createHash('sha256').update(input.body).digest('hex');
+  const signature = createHmac('sha256', input.secret)
+    .update([input.method.toUpperCase(), input.path, timestamp, nonce, bodyHash].join('\n'))
+    .digest('hex');
+
+  return {
+    'x-helio-timestamp': timestamp,
+    'x-helio-nonce': nonce,
+    'x-helio-signature': signature,
+  };
+}
+
 export async function handleReconciliation(
   payload: Record<string, unknown>,
   _prisma: PrismaClient,
 ): Promise<void> {
   // 日对账默认核对「前一日」的已结清流水。
   const date = (payload.date as string) ?? yesterdayIso();
-  const baseUrl = process.env.API_BASE_URL ?? 'http://localhost:3000';
-  const token = process.env.RECONCILE_INTERNAL_TOKEN ?? 'helio-internal';
+  const baseUrl = process.env.API_BASE_URL ?? 'http://localhost:3000/api';
+  const secret = process.env.INTERNAL_REQUEST_SECRET;
+  if (!secret) {
+    throw new Error('INTERNAL_REQUEST_SECRET is required for reconciliation requests');
+  }
+  const endpoint = new URL(
+    'payments/reconcile/daily/internal',
+    `${baseUrl.replace(/\/+$/, '')}/`,
+  );
+  const body = JSON.stringify({ date });
 
-  const res = await fetch(`${baseUrl}/payments/reconcile/daily/internal`, {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-internal-token': token,
+      ...createInternalRequestHeaders({
+        method: 'POST',
+        path: endpoint.pathname,
+        body,
+        secret,
+      }),
     },
-    body: JSON.stringify({ date }),
+    body,
   });
 
   if (!res.ok) {

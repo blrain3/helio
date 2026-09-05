@@ -3,6 +3,8 @@ import { ReconciliationService } from './reconciliation.service';
 import { NotFoundError, ValidationError } from '../../auth/domain/errors';
 import { canTransitionReconciliationDiff } from '../domain/payment.entity';
 
+const owner = { sub: 'user-1', email: 'owner@example.com', role: 'USER' as const };
+
 describe('Reconciliation diff state machine', () => {
   it('合法流转：PENDING → RESOLVED', () => {
     expect(canTransitionReconciliationDiff('PENDING', 'RESOLVED')).toBe(true);
@@ -24,6 +26,8 @@ describe('ReconciliationService.resolveDiff（差异处置：解锁冻结）', (
       findPendingByPaymentId: vi.fn(),
     },
     gateway: { downloadBill: vi.fn() },
+    payments: { findById: vi.fn() },
+    orders: { assertOwnedByUser: vi.fn() },
   };
 
   let service: ReconciliationService;
@@ -33,28 +37,32 @@ describe('ReconciliationService.resolveDiff（差异处置：解锁冻结）', (
       deps.prisma as never,
       deps.diffs as never,
       deps.gateway as never,
+      deps.payments as never,
+      deps.orders as never,
     );
   });
 
   it('差异不存在抛 NotFoundError', async () => {
     deps.diffs.findById.mockResolvedValue(null);
-    await expect(service.resolveDiff('missing')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.resolveDiff('missing', owner)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('PENDING → RESOLVED，调用仓储解锁', async () => {
-    deps.diffs.findById.mockResolvedValue({ id: 'd-1', status: 'PENDING' });
+    deps.diffs.findById.mockResolvedValue({ id: 'd-1', paymentId: 'payment-1', status: 'PENDING' });
+    deps.payments.findById.mockResolvedValue({ orderId: 'o-1' });
     deps.diffs.resolve.mockResolvedValue(true);
 
-    const result = await service.resolveDiff('d-1');
+    const result = await service.resolveDiff('d-1', owner);
 
     expect(result).toEqual({ id: 'd-1', status: 'RESOLVED' });
     expect(deps.diffs.resolve).toHaveBeenCalledWith('d-1');
   });
 
   it('已 RESOLVED 幂等返回，不重复流转', async () => {
-    deps.diffs.findById.mockResolvedValue({ id: 'd-1', status: 'RESOLVED' });
+    deps.diffs.findById.mockResolvedValue({ id: 'd-1', paymentId: 'payment-1', status: 'RESOLVED' });
+    deps.payments.findById.mockResolvedValue({ orderId: 'o-1' });
 
-    const result = await service.resolveDiff('d-1');
+    const result = await service.resolveDiff('d-1', owner);
 
     expect(result).toEqual({ id: 'd-1', status: 'RESOLVED' });
     expect(deps.diffs.resolve).not.toHaveBeenCalled();

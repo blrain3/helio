@@ -19,6 +19,7 @@ import {
   ValidationError,
   UnauthorizedError,
 } from '../../auth/domain/errors';
+import { AuthUser } from '../../auth/domain/user.entity';
 
 /**
  * 支付应用服务：支付创建、七步回调链路、退款。
@@ -52,11 +53,13 @@ export class PaymentService {
     orderId: string,
     provider: PaymentProvider,
     notifyUrl: string,
+    user: AuthUser,
   ): Promise<PaymentEntity> {
     const order = await this.orders.findById(orderId);
     if (!order) {
       throw new NotFoundError('订单不存在');
     }
+    await this.requireOrderService().assertOwnedByUser(orderId, user);
     if (order.status !== 'PENDING_PAYMENT') {
       throw new ValidationError('订单未处于待支付状态');
     }
@@ -178,11 +181,12 @@ export class PaymentService {
   }
 
   /** 关闭支付：PENDING → CLOSED。 */
-  async closePayment(paymentId: string): Promise<PaymentEntity> {
+  async closePayment(paymentId: string, user: AuthUser): Promise<PaymentEntity> {
     const payment = await this.payments.findById(paymentId);
     if (!payment) {
       throw new NotFoundError('支付流水不存在');
     }
+    await this.assertPaymentAccess(payment, user, true);
     if (!canTransitionPayment(payment.status, 'CLOSED')) {
       throw new ValidationError(`支付状态不允许从 ${payment.status} 流转到 CLOSED`);
     }
@@ -198,11 +202,17 @@ export class PaymentService {
    * 4. 调用网关 refundPayment；
    * 5. 创建退款单（CREATED）并累计退款金额。
    */
-  async refund(paymentId: string, amount: number, refundNo: string): Promise<RefundEntity> {
+  async refund(
+    paymentId: string,
+    amount: number,
+    refundNo: string,
+    user: AuthUser,
+  ): Promise<RefundEntity> {
     const payment = await this.payments.findById(paymentId);
     if (!payment) {
       throw new NotFoundError('支付流水不存在');
     }
+    await this.assertPaymentAccess(payment, user, true);
     if (payment.status !== 'SUCCESS') {
       throw new ValidationError('仅支付成功的流水可退款');
     }
@@ -240,20 +250,37 @@ export class PaymentService {
   }
 
   /** 查询支付。 */
-  async findById(id: string): Promise<PaymentEntity> {
+  async findById(id: string, user: AuthUser): Promise<PaymentEntity> {
     const payment = await this.payments.findById(id);
     if (!payment) {
       throw new NotFoundError('支付流水不存在');
     }
+    await this.assertPaymentAccess(payment, user);
     return payment;
   }
 
-  async listByUser(userId: string): Promise<PaymentEntity[]> {
-    if (!this.orderService) {
-      throw new Error('OrderService is required to list payments by user');
-    }
-    const orders = await this.orderService.listByUser(userId);
+  async listByUser(user: AuthUser): Promise<PaymentEntity[]> {
+    const orders = await this.requireOrderService().listByUser(user.sub);
     return this.payments.findByOrderIds(orders.map((order) => order.id));
+  }
+
+  private async assertPaymentAccess(
+    payment: PaymentEntity,
+    user: AuthUser,
+    allowPrivileged = false,
+  ): Promise<void> {
+    await this.requireOrderService().assertOwnedByUser(
+      payment.orderId,
+      user,
+      allowPrivileged,
+    );
+  }
+
+  private requireOrderService(): OrderService {
+    if (!this.orderService) {
+      throw new Error('OrderService is required for payment authorization');
+    }
+    return this.orderService;
   }
 
   /** 支付状态机流转（校验合法流转后更新）。 */
